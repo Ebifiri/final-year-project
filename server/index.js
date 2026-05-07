@@ -1,0 +1,44 @@
+import 'dotenv/config';
+import express from 'express';
+import cors from 'cors';
+import connectDB from './config/db.js';
+
+// Route handlers
+import authRoutes       from './routes/authRoutes.js';
+import courseRoutes     from './routes/courseRoutes.js';
+import enrollmentRoutes from './routes/enrollmentRoutes.js';
+import userRoutes       from './routes/userRoutes.js';
+
+// Connect to MongoDB
+connectDB();
+
+const app = express();
+
+// ── Middleware ────────────────────────────────────────────────────────────────
+app.use(cors({
+  origin: [
+    'http://localhost:5173',   // Vite dev server
+    'http://localhost:4173',   // Vite preview
+    process.env.FRONTEND_URL, // production frontend URL (set in .env)
+  ].filter(Boolean),
+  credentials: true,
+}));
+app.use(express.json());
+
+// ── Routes ────────────────────────────────────────────────────────────────────
+app.use('/api/auth',        authRoutes);
+app.use('/api/courses',     courseRoutes);
+app.use('/api/enrollments', enrollmentRoutes);
+app.use('/api/users',       userRoutes);
+
+// ── Health check ─────────────────────────────────────────────────────────────
+app.get('/api/health', (_, res) => res.json({ status: 'ok', timestamp: new Date() }));
+
+// ── 404 fallback ──────────────────────────────────────────────────────────────
+app.use((_, res) => res.status(404).json({ message: 'Route not found' }));
+
+// ── Start server ──────────────────────────────────────────────────────────────
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on http://localhost:${PORT}`);
+});

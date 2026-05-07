@@ -1,0 +1,61 @@
+@import "tailwindcss";
+
+/* ── Desktop sidebar (width-based slide) ─────────────────── */
+.desktop-sidebar-enter-active {
+  transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.35s ease;
+  overflow: hidden;
+}
+.desktop-sidebar-leave-active {
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.25s ease;
+  overflow: hidden;
+}
+.desktop-sidebar-enter-from,
+.desktop-sidebar-leave-to {
+  width: 0;
+  opacity: 0;
+}
+.desktop-sidebar-enter-to,
+.desktop-sidebar-leave-from {
+  width: 18rem; /* w-72 */
+  opacity: 1;
+}
+
+/* ── Mobile sidebar (translateX slide) ───────────────────── */
+.sidebar-slide-enter-active {
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.sidebar-slide-leave-active {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.sidebar-slide-enter-from,
+.sidebar-slide-leave-to {
+  transform: translateX(-100%);
+}
+.sidebar-slide-enter-to,
+.sidebar-slide-leave-from {
+  transform: translateX(0);
+}
+
+/* ── Overlay fade transition ─────────────────────────────── */
+.overlay-enter-active,
+.overlay-leave-active {
+  transition: opacity 0.3s ease;
+}
+.overlay-enter-from,
+.overlay-leave-to {
+  opacity: 0;
+}
+
+/* ── Custom scrollbar ────────────────────────────────────── */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border-radius: 9999px;
+}
