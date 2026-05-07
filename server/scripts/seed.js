@@ -7,7 +7,12 @@
  * Make sure server/.env exists with a valid MONGODB_URI before running.
  */
 
-import 'dotenv/config';
+import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: join(__dirname, '../.env') });
 import mongoose from 'mongoose';
 import Course from '../models/Course.js';
 
