@@ -98,6 +98,7 @@ router.post('/sections/:sectionId/resources',
       if (req.file) {
         resourceData.fileUrl      = req.file.path;      // Cloudinary secure URL
         resourceData.filePublicId = req.file.filename;  // Cloudinary public_id
+        resourceData.mimeType     = req.file.mimetype;  // e.g. application/vnd.ms-powerpoint
       }
 
       const resource = await Resource.create(resourceData);

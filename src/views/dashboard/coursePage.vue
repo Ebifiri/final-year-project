@@ -185,8 +185,9 @@
                     class="flex items-start gap-3 flex-1 min-w-0"
                     @click="res.fileUrl || res.externalUrl ? undefined : $event.preventDefault()"
                   >
-                    <div :class="['w-7 h-7 mt-0.5 rounded-lg flex items-center justify-center flex-shrink-0', resourceIconBg(res.type)]">
-                      <component :is="resourceIcon(res.type)" :class="['w-3.5 h-3.5', resourceIconColor(res.type)]" />
+                    <!-- Dynamic file-type icon -->
+                    <div :class="['w-7 h-7 mt-0.5 rounded-lg flex items-center justify-center flex-shrink-0', getResourceMeta(res).bg]">
+                      <component :is="getResourceMeta(res).icon" :class="['w-3.5 h-3.5', getResourceMeta(res).color]" />
                     </div>
                     <div class="flex-1 min-w-0">
                       <span class="text-sm text-blue-600 group-hover:text-blue-800 group-hover:underline underline-offset-2 transition-colors leading-snug block truncate">
@@ -197,10 +198,23 @@
                       </span>
                     </div>
                   </a>
-                  <!-- Right-side icons -->
+                  <!-- Right-side actions -->
                   <div class="flex items-center gap-1 mt-0.5 flex-shrink-0">
                     <AlertCircle v-if="res.type === 'assignment'" class="w-3.5 h-3.5 text-amber-500" />
-                    <ExternalLink v-else-if="res.externalUrl" class="w-3 h-3 text-slate-300" />
+                    <ExternalLink v-else-if="res.externalUrl && !res.fileUrl" class="w-3 h-3 text-slate-300" />
+                    <!-- Download button (shown on hover, not for assignments/quizzes/announcements) -->
+                    <a
+                      v-if="isDownloadable(res)"
+                      :href="makeDownloadUrl(res.fileUrl)"
+                      :download="getFilename(res)"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-blue-100 text-slate-300 hover:text-blue-600 transition-all"
+                      title="Download"
+                      @click.stop
+                    >
+                      <Download class="w-3.5 h-3.5" />
+                    </a>
                     <!-- Delete resource (lecturer/admin, visible on hover) -->
                     <button
                       v-if="canManage"
@@ -384,6 +398,8 @@ import {
   Link2, ClipboardList, Megaphone, AlertCircle,
   FlaskConical, Video, BookLock, UserMinus, Loader2, LogIn,
   Plus, PlusCircle, FolderOpen, ExternalLink, Trash2, Package,
+  Presentation, FileSpreadsheet, FileCode2, FileImage, Music,
+  Archive, Download, File,
 } from 'lucide-vue-next';
 import { api }                   from '@/api/client.js';
 import { useEnrollmentStore }    from '@/stores/enrollments.js';
@@ -474,27 +490,101 @@ function toggleSection(id) {
   expandedSections.value[id] = !(expandedSections.value[id] ?? allExpanded.value);
 }
 
-// ── Icon helpers ──────────────────────────────────────────────────────────────
-function sectionIcon(type) {
-  return { general: Megaphone, week: Calendar, module: FileText, announcement: Megaphone }[type] ?? Calendar;
-}
+// ── Dynamic icon system ───────────────────────────────────────────────────────
+// Priority: mimeType → file extension from URL → resource type fallback
 
-const RESOURCE_META = {
-  slides:       { bg: 'bg-indigo-50', color: 'text-indigo-500', icon: BookOpen },
-  lab:          { bg: 'bg-rose-50',   color: 'text-rose-500',   icon: FlaskConical },
-  video:        { bg: 'bg-purple-50', color: 'text-purple-500', icon: Video },
-  reading:      { bg: 'bg-green-50',  color: 'text-green-500',  icon: Link2 },
-  assignment:   { bg: 'bg-amber-50',  color: 'text-amber-500',  icon: ClipboardList },
-  quiz:         { bg: 'bg-orange-50', color: 'text-orange-500', icon: ClipboardList },
-  announcement: { bg: 'bg-blue-50',   color: 'text-blue-500',   icon: Megaphone },
-  link:         { bg: 'bg-teal-50',   color: 'text-teal-500',   icon: Link2 },
-  document:     { bg: 'bg-slate-100', color: 'text-slate-500',  icon: FileText },
-  other:        { bg: 'bg-slate-100', color: 'text-slate-500',  icon: Package },
+const MIME_ICONS = [
+  // PowerPoint
+  { test: m => m?.includes('presentationml') || m?.includes('ms-powerpoint'),
+    meta: { icon: Presentation,    bg: 'bg-orange-50',  color: 'text-orange-500' } },
+  // Word
+  { test: m => m?.includes('wordprocessingml') || m?.includes('msword'),
+    meta: { icon: FileText,        bg: 'bg-blue-50',    color: 'text-blue-600' } },
+  // Excel
+  { test: m => m?.includes('spreadsheetml') || m?.includes('ms-excel'),
+    meta: { icon: FileSpreadsheet, bg: 'bg-green-50',   color: 'text-green-600' } },
+  // PDF
+  { test: m => m === 'application/pdf',
+    meta: { icon: FileText,        bg: 'bg-red-50',     color: 'text-red-500' } },
+  // Video
+  { test: m => m?.startsWith('video/'),
+    meta: { icon: Video,           bg: 'bg-purple-50',  color: 'text-purple-500' } },
+  // Audio
+  { test: m => m?.startsWith('audio/'),
+    meta: { icon: Music,           bg: 'bg-indigo-50',  color: 'text-indigo-400' } },
+  // Image
+  { test: m => m?.startsWith('image/'),
+    meta: { icon: FileImage,       bg: 'bg-teal-50',    color: 'text-teal-500' } },
+  // Archive
+  { test: m => /zip|rar|7z|tar|gzip/.test(m ?? ''),
+    meta: { icon: Archive,         bg: 'bg-amber-50',   color: 'text-amber-600' } },
+  // Code / text
+  { test: m => m?.startsWith('text/') || /javascript|json|xml/.test(m ?? ''),
+    meta: { icon: FileCode2,       bg: 'bg-slate-100',  color: 'text-slate-500' } },
+];
+
+const EXT_MAP = {
+  pptx: 0, ppt: 0,
+  docx: 1, doc: 1,
+  xlsx: 2, xls: 2,
+  pdf:  3,
+  mp4:  4, mov: 4, avi: 4, webm: 4,
+  mp3:  5, wav: 5, ogg: 5,
+  png:  6, jpg: 6, jpeg: 6, gif: 6, webp: 6, svg: 6,
+  zip:  7, rar: 7, '7z': 7, tar: 7, gz: 7,
+  js:   8, ts: 8, py: 8, java: 8, c: 8, cpp: 8, cs: 8,
+  go:   8, rs: 8, rb: 8, php: 8, html: 8, css: 8, json: 8, xml: 8, md: 8,
 };
 
-function resourceIcon(type)      { return (RESOURCE_META[type] ?? RESOURCE_META.document).icon; }
-function resourceIconBg(type)    { return (RESOURCE_META[type] ?? RESOURCE_META.document).bg; }
-function resourceIconColor(type) { return (RESOURCE_META[type] ?? RESOURCE_META.document).color; }
+const TYPE_FALLBACK = {
+  slides:       { icon: Presentation,    bg: 'bg-orange-50',  color: 'text-orange-500' },
+  lab:          { icon: FlaskConical,    bg: 'bg-rose-50',    color: 'text-rose-500' },
+  video:        { icon: Video,           bg: 'bg-purple-50',  color: 'text-purple-500' },
+  reading:      { icon: BookOpen,        bg: 'bg-green-50',   color: 'text-green-500' },
+  assignment:   { icon: ClipboardList,   bg: 'bg-amber-50',   color: 'text-amber-500' },
+  quiz:         { icon: ClipboardList,   bg: 'bg-orange-50',  color: 'text-orange-500' },
+  announcement: { icon: Megaphone,       bg: 'bg-blue-50',    color: 'text-blue-500' },
+  link:         { icon: Link2,           bg: 'bg-teal-50',    color: 'text-teal-500' },
+  document:     { icon: FileText,        bg: 'bg-blue-50',    color: 'text-blue-600' },
+  other:        { icon: Package,         bg: 'bg-slate-100',  color: 'text-slate-500' },
+};
+
+function getResourceMeta(res) {
+  // 1. Try mimeType stored on the resource
+  if (res.mimeType) {
+    const found = MIME_ICONS.find(m => m.test(res.mimeType));
+    if (found) return found.meta;
+  }
+  // 2. Try extracting extension from fileUrl
+  if (res.fileUrl) {
+    const ext = res.fileUrl.split('?')[0].split('.').pop().toLowerCase();
+    const idx = EXT_MAP[ext];
+    if (idx !== undefined) return MIME_ICONS[idx].meta;
+  }
+  // 3. Fall back to resource type
+  return TYPE_FALLBACK[res.type] ?? { icon: File, bg: 'bg-slate-100', color: 'text-slate-400' };
+}
+
+// ── Download helpers ──────────────────────────────────────────────────────────
+const NON_DOWNLOADABLE = new Set(['assignment', 'quiz', 'announcement']);
+
+function isDownloadable(res) {
+  return !!res.fileUrl && !NON_DOWNLOADABLE.has(res.type);
+}
+
+// Cloudinary raw resources need fl_attachment to force a browser download
+function makeDownloadUrl(url) {
+  if (!url) return url;
+  if (url.includes('res.cloudinary.com')) {
+    return url.replace('/upload/', '/upload/fl_attachment/');
+  }
+  return url;
+}
+
+function getFilename(res) {
+  if (!res.fileUrl) return res.title;
+  return res.fileUrl.split('?')[0].split('/').pop() || res.title;
+}
 
 // ── Date formatter ────────────────────────────────────────────────────────────
 function formatDate(iso) {

@@ -12,6 +12,7 @@ const resourceSchema = new mongoose.Schema(
     },
     fileUrl:      String,
     filePublicId: String,   // Cloudinary public_id for deletion
+    mimeType:     String,   // e.g. 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
     externalUrl:  String,   // for 'link' resources
     assignmentRef: { type: mongoose.Schema.Types.ObjectId, ref: 'Assignment' },
     quizRef:       { type: mongoose.Schema.Types.ObjectId, ref: 'Quiz' },
