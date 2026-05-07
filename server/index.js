@@ -30,7 +30,7 @@ app.use(cors({
   origin: [
     'http://localhost:5173',   // Vite dev server
     'http://localhost:4173',   // Vite preview
-    process.env.FRONTEND_URL, // production frontend URL (set in .env)
+    process.env.FRONTEND_URL, // production frontend URL (Netlify — set in Render env vars)
   ].filter(Boolean),
   credentials: true,
 }));

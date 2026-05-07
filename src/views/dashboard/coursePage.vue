@@ -493,6 +493,11 @@ function toggleSection(id) {
 // ── Dynamic icon system ───────────────────────────────────────────────────────
 // Priority: mimeType → file extension from URL → resource type fallback
 
+// Section type → icon (used in section headers)
+function sectionIcon(type) {
+  return { general: Megaphone, week: Calendar, module: FileText, announcement: Megaphone }[type] ?? Calendar;
+}
+
 const MIME_ICONS = [
   // PowerPoint
   { test: m => m?.includes('presentationml') || m?.includes('ms-powerpoint'),
