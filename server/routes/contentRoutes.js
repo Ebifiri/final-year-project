@@ -148,11 +148,11 @@ router.delete('/resources/:resourceId', protect, async (req, res) => {
   }
 });
 
-// ── GET /api/content/download/:resourceId  — proxy file download ──────────────
-// Fetches the file from Cloudinary and streams it to the browser with a proper
-// Content-Disposition: attachment header, avoiding the fl_attachment
-// transformation which corrupts binary files (pptx, docx, xlsx, etc.)
-router.get('/download/:resourceId', protect, async (req, res) => {
+// ── GET /api/content/download/:resourceId  — public proxy, no auth required ───
+// Browser <a> links can't send Authorization headers, so we skip protect here.
+// Resource ObjectIDs (24-char hex) are effectively unguessable, and the
+// underlying Cloudinary files are already publicly accessible.
+router.get('/download/:resourceId', async (req, res) => {
   try {
     const resource = await Resource.findById(req.params.resourceId);
     if (!resource || !resource.fileUrl) {

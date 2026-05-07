@@ -175,18 +175,37 @@
                 <div
                   v-for="res in sec.resources"
                   :key="res._id"
-                  class="flex items-start gap-3 px-5 py-3 hover:bg-blue-50 group transition-colors"
+                  :class="['flex items-center gap-2 px-4 py-3 group transition-colors', cart.isSelected(res._id) ? 'bg-blue-50' : 'hover:bg-blue-50']"
                 >
+                  <!-- Select checkbox (downloadable resources only) -->
+                  <button
+                    v-if="isDownloadable(res)"
+                    :class="[
+                      'flex-shrink-0 w-5 h-5 rounded border-2 transition-all flex items-center justify-center',
+                      cart.isSelected(res._id)
+                        ? 'bg-blue-500 border-blue-500'
+                        : 'border-slate-300 opacity-0 group-hover:opacity-100 hover:border-blue-400'
+                    ]"
+                    :title="cart.isSelected(res._id) ? 'Remove from download cart' : 'Add to download cart'"
+                    @click="cart.toggle(res)"
+                  >
+                    <svg v-if="cart.isSelected(res._id)" class="w-3 h-3 text-white" viewBox="0 0 12 12" fill="none">
+                      <path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                  </button>
+                  <!-- Spacer for non-downloadable items -->
+                  <div v-else class="flex-shrink-0 w-5" />
+
                   <!-- Clickable file/link area -->
                   <a
                     :href="res.fileUrl || res.externalUrl || '#'"
                     :target="res.fileUrl || res.externalUrl ? '_blank' : undefined"
                     rel="noopener noreferrer"
-                    class="flex items-start gap-3 flex-1 min-w-0"
+                    class="flex items-center gap-3 flex-1 min-w-0"
                     @click="res.fileUrl || res.externalUrl ? undefined : $event.preventDefault()"
                   >
                     <!-- Dynamic file-type icon -->
-                    <div :class="['w-7 h-7 mt-0.5 rounded-lg flex items-center justify-center flex-shrink-0', getResourceMeta(res).bg]">
+                    <div :class="['w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0', getResourceMeta(res).bg]">
                       <component :is="getResourceMeta(res).icon" :class="['w-3.5 h-3.5', getResourceMeta(res).color]" />
                     </div>
                     <div class="flex-1 min-w-0">
@@ -198,22 +217,20 @@
                       </span>
                     </div>
                   </a>
+
                   <!-- Right-side actions -->
-                  <div class="flex items-center gap-1 mt-0.5 flex-shrink-0">
+                  <div class="flex items-center gap-1 flex-shrink-0">
                     <AlertCircle v-if="res.type === 'assignment'" class="w-3.5 h-3.5 text-amber-500" />
                     <ExternalLink v-else-if="res.externalUrl && !res.fileUrl" class="w-3 h-3 text-slate-300" />
-                    <!-- Download button (shown on hover, not for assignments/quizzes/announcements) -->
-                    <a
+                    <!-- Single download button -->
+                    <button
                       v-if="isDownloadable(res)"
-                      :href="downloadUrl(res)"
-                      target="_blank"
-                      rel="noopener noreferrer"
                       class="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-blue-100 text-slate-300 hover:text-blue-600 transition-all"
                       title="Download"
-                      @click.stop
+                      @click.stop="downloadSingle(res)"
                     >
                       <Download class="w-3.5 h-3.5" />
-                    </a>
+                    </button>
                     <!-- Delete resource (lecturer/admin, visible on hover) -->
                     <button
                       v-if="canManage"
@@ -398,15 +415,17 @@ import {
   FlaskConical, Video, BookLock, UserMinus, Loader2, LogIn,
   Plus, PlusCircle, FolderOpen, ExternalLink, Trash2, Package,
   Presentation, FileSpreadsheet, FileCode2, FileImage, Music,
-  Archive, Download, File,
+  Archive, Download, File, CheckSquare,
 } from 'lucide-vue-next';
 import { api }                   from '@/api/client.js';
 import { useEnrollmentStore }    from '@/stores/enrollments.js';
 import { useAuthStore }          from '@/stores/auth.js';
+import { useDownloadCart }       from '@/stores/downloadCart.js';
 
 const route           = useRoute();
 const enrollmentStore = useEnrollmentStore();
 const auth            = useAuthStore();
+const cart            = useDownloadCart();
 
 const code     = decodeURIComponent(route.params.code ?? '').toUpperCase();
 const course   = ref(null);
@@ -576,10 +595,24 @@ function isDownloadable(res) {
   return !!res.fileUrl && !NON_DOWNLOADABLE.has(res.type);
 }
 
-// Use a backend proxy endpoint so the file is streamed with correct
-// Content-Disposition headers — avoids Cloudinary fl_attachment corruption
-function downloadUrl(res) {
-  return `${import.meta.env.VITE_API_BASE_URL || ''}/api/content/download/${res._id}`;
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+
+async function downloadSingle(resource) {
+  try {
+    const res  = await fetch(`${BASE_URL}/api/content/download/${resource._id}`);
+    if (!res.ok) return;
+    const blob    = await res.blob();
+    const blobUrl = URL.createObjectURL(blob);
+    const a       = document.createElement('a');
+    a.href        = blobUrl;
+    a.download    = resource.title;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
+  } catch (e) {
+    console.error('Download failed:', e);
+  }
 }
 
 // ── Date formatter ────────────────────────────────────────────────────────────
