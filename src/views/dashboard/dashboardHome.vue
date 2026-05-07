@@ -82,13 +82,6 @@
                   <p class="text-xs font-semibold text-slate-800 leading-snug line-clamp-2 hover:text-blue-700 transition-colors">{{ c.title }}</p>
                 </RouterLink>
                 <p class="text-[11px] text-slate-400 mt-1">{{ c.faculty }}</p>
-                <!-- Progress -->
-                <div class="mt-2.5 flex items-center gap-2">
-                  <div class="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                    <div :class="['h-full rounded-full', c.color]" :style="{ width: c.progress + '%' }"></div>
-                  </div>
-                  <span class="text-[11px] text-slate-400 font-medium shrink-0">{{ c.progress }}%</span>
-                </div>
                 <!-- Unenroll button -->
                 <button
                   class="mt-2.5 w-full text-[11px] font-semibold text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg py-1.5 transition-colors border border-transparent hover:border-red-200"

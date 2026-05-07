@@ -4,28 +4,62 @@
     <!-- Course Hero Banner -->
     <div v-if="course" :class="['relative overflow-hidden px-6 lg:px-10 pt-8 pb-8', course.color]">
       <div class="absolute inset-0 bg-linear-to-br from-black/20 to-black/50"></div>
-      <div class="relative max-w-6xl mx-auto">
-        <span class="inline-block text-xs font-bold text-white/70 uppercase tracking-widest mb-2">
-          {{ course.dept }} &bull; {{ course.year }}
-        </span>
-        <h1 class="text-2xl lg:text-3xl font-extrabold text-white leading-snug">
-          {{ course.code }}: {{ course.title }}
-        </h1>
-        <p class="text-sm text-white/60 mt-2">{{ course.credits }} credit{{ course.credits !== 1 ? 's' : '' }}</p>
+      <div class="relative max-w-6xl mx-auto flex items-start justify-between gap-4">
+        <div>
+          <span class="inline-block text-xs font-bold text-white/70 uppercase tracking-widest mb-2">
+            {{ course.dept }} &bull; {{ course.year }}
+          </span>
+          <h1 class="text-2xl lg:text-3xl font-extrabold text-white leading-snug">
+            {{ course.code }}: {{ course.title }}
+          </h1>
+          <p class="text-sm text-white/60 mt-2">{{ course.credits }} credit{{ course.credits !== 1 ? 's' : '' }}</p>
+        </div>
+
+        <!-- Unenroll button (only when enrolled) -->
+        <button
+          v-if="enrolled"
+          class="flex-shrink-0 flex items-center gap-1.5 px-4 py-2 mt-6 bg-white/15 hover:bg-white/25 text-white text-xs font-bold rounded-xl border border-white/30 transition-colors backdrop-blur-sm"
+          :disabled="enrolling"
+          @click="handleUnenroll"
+        >
+          <UserMinus class="w-3.5 h-3.5" />
+          {{ enrolling ? 'Unenrolling…' : 'Unenroll' }}
+        </button>
       </div>
     </div>
 
     <!-- Not found -->
-    <div v-else class="flex flex-col items-center justify-center py-24 text-center">
+    <div v-else-if="!loading && course === null" class="flex flex-col items-center justify-center py-24 text-center">
       <p class="font-semibold text-slate-700">Course not found</p>
       <RouterLink to="/courses" class="mt-3 text-sm text-blue-600 hover:underline">← Back to catalogue</RouterLink>
     </div>
 
     <!-- Page body -->
-    <div class="max-w-6xl mx-auto px-6 lg:px-10 py-8 flex flex-col gap-10">
+    <div v-if="course" class="max-w-6xl mx-auto px-6 lg:px-10 py-8 flex flex-col gap-10">
 
-      <!-- Course sections grid -->
-      <section>
+      <!-- ── NOT ENROLLED GATE ─────────────────────────────────────── -->
+      <div v-if="!enrolled" class="flex flex-col items-center justify-center py-16 text-center bg-white rounded-2xl border border-slate-200 shadow-sm">
+        <div :class="['w-16 h-16 rounded-2xl flex items-center justify-center mb-4', course.color]">
+          <BookLock class="w-7 h-7 text-white" />
+        </div>
+        <h2 class="text-lg font-bold text-slate-900">You are not enrolled in this course</h2>
+        <p class="text-sm text-slate-500 mt-2 max-w-sm">
+          Enrol to access lecture slides, lab resources, assignments and more for
+          <span class="font-semibold">{{ course.code }}: {{ course.title }}</span>.
+        </p>
+        <button
+          class="mt-6 flex items-center gap-2 px-6 py-3 bg-[#1e293b] hover:bg-slate-700 text-white font-bold rounded-xl transition-colors shadow-md disabled:opacity-60"
+          :disabled="enrolling"
+          @click="handleEnroll"
+        >
+          <Loader2 v-if="enrolling" class="w-4 h-4 animate-spin" />
+          <BookOpen v-else class="w-4 h-4" />
+          {{ enrolling ? 'Enrolling…' : 'Enrol in this course' }}
+        </button>
+      </div>
+
+      <!-- ── COURSE CONTENT (enrolled users only) ─────────────────── -->
+      <section v-else>
         <div class="flex items-center justify-between mb-5">
           <p class="text-sm text-slate-500">{{ sections.length }} sections &bull; {{ totalResources }} resources</p>
           <button
@@ -91,25 +125,54 @@ import { useRoute, RouterLink } from 'vue-router';
 import {
   ChevronDown, BookOpen, Calendar, FileText,
   Link2, ClipboardList, Megaphone, AlertCircle,
-  FlaskConical, Video,
+  FlaskConical, Video, BookLock, UserMinus, Loader2,
 } from 'lucide-vue-next';
-import { api } from '@/api/client.js';
+import { api }                   from '@/api/client.js';
+import { useEnrollmentStore }    from '@/stores/enrollments.js';
 
-const route  = useRoute();
-const code   = decodeURIComponent(route.params.code ?? '').toUpperCase();
-const course = ref(null);
+const route           = useRoute();
+const enrollmentStore = useEnrollmentStore();
+
+const code     = decodeURIComponent(route.params.code ?? '').toUpperCase();
+const course   = ref(null);
+const loading  = ref(true);
+const enrolling = ref(false);
+
+// ── Enrollment state ──────────────────────────────────────────────────────────
+const enrolled = computed(() => enrollmentStore.isEnrolled(code));
 
 onMounted(async () => {
+  // Fetch course details
   try {
     const data = await api.get(`/api/courses/${encodeURIComponent(code)}`);
     course.value = data.course;
   } catch {
     course.value = null;
+  } finally {
+    loading.value = false;
+  }
+
+  // Ensure enrollments are loaded (may already be loaded from another page)
+  if (!enrollmentStore.enrollments.length) {
+    await enrollmentStore.fetchEnrollments();
   }
 });
 
+async function handleEnroll() {
+  enrolling.value = true;
+  await enrollmentStore.enroll(code);
+  enrolling.value = false;
+}
+
+async function handleUnenroll() {
+  enrolling.value = true;
+  const enrollment = enrollmentStore.enrollments.find(e => e.course?.code === code);
+  if (enrollment) await enrollmentStore.unenroll(enrollment._id);
+  enrolling.value = false;
+}
+
 // ── Sections ─────────────────────────────────────────────────────────────────
-const allExpanded     = ref(true);
+const allExpanded      = ref(true);
 const expandedSections = ref({});
 
 function toggleSection(id) {

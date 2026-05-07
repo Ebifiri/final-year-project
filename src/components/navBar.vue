@@ -86,11 +86,11 @@
                 Log in
               </RouterLink>
 
-              <!-- User avatar (logged in) -->
-              <button
+              <!-- User avatar (logged in) — clicking goes to dashboard, NOT logout -->
+              <RouterLink
                 v-if="isLoggedIn"
+                to="/dashboard/home"
                 class="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors"
-                @click="handleLogout"
               >
                 <img
                   :src="avatarUrl"
@@ -98,8 +98,7 @@
                   alt="avatar"
                 />
                 <span class="text-sm font-medium text-white">{{ auth.user?.name?.split(' ')[0] }}</span>
-                <LogOut class="w-3.5 h-3.5 text-slate-400" />
-              </button>
+              </RouterLink>
             </div>
           </div>
         </div>
