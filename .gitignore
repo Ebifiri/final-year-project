@@ -41,3 +41,6 @@ __screenshots__/
 # Environment variables — never commit these
 .env
 server/.env
+
+# Local dev file uploads (not used in production — Cloudinary is used instead)
+uploads/
