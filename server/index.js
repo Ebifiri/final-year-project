@@ -19,6 +19,7 @@ import contentRoutes     from './routes/contentRoutes.js';
 import assignmentRoutes  from './routes/assignmentRoutes.js';
 import submissionRoutes  from './routes/submissionRoutes.js';
 import quizRoutes        from './routes/quizRoutes.js';
+import aiRoutes          from './routes/aiRoutes.js';
 
 // Connect to MongoDB
 connectDB();
@@ -46,6 +47,7 @@ app.use('/api/content',     contentRoutes);
 app.use('/api/assignments', assignmentRoutes);
 app.use('/api/submissions', submissionRoutes);
 app.use('/api/quizzes',     quizRoutes);
+app.use('/api/ai',          aiRoutes);
 
 // ── Health check ─────────────────────────────────────────────────────────────
 app.get('/api/health', (_, res) => res.json({ status: 'ok', timestamp: new Date() }));

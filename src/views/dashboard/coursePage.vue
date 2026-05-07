@@ -222,6 +222,15 @@
                   <div class="flex items-center gap-1 flex-shrink-0">
                     <AlertCircle v-if="res.type === 'assignment'" class="w-3.5 h-3.5 text-amber-500" />
                     <ExternalLink v-else-if="res.externalUrl && !res.fileUrl" class="w-3 h-3 text-slate-300" />
+                    <!-- AI Study button -->
+                    <button
+                      v-if="canAI(res)"
+                      class="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-violet-100 text-slate-300 hover:text-violet-600 transition-all"
+                      title="AI Study Assistant"
+                      @click.stop="openAI(res)"
+                    >
+                      <Sparkles class="w-3.5 h-3.5" />
+                    </button>
                     <!-- Single download button -->
                     <button
                       v-if="isDownloadable(res)"
@@ -403,6 +412,9 @@
       </div>
     </Teleport>
 
+    <!-- AI Study Assistant modal -->
+    <AIStudyModal v-model="showAI" :resource="aiResource" />
+
   </main>
 </template>
 
@@ -415,8 +427,9 @@ import {
   FlaskConical, Video, BookLock, UserMinus, Loader2, LogIn,
   Plus, PlusCircle, FolderOpen, ExternalLink, Trash2, Package,
   Presentation, FileSpreadsheet, FileCode2, FileImage, Music,
-  Archive, Download, File, CheckSquare,
+  Archive, Download, File, CheckSquare, Sparkles,
 } from 'lucide-vue-next';
+import AIStudyModal from '@/components/AIStudyModal.vue';
 import { api }                   from '@/api/client.js';
 import { useEnrollmentStore }    from '@/stores/enrollments.js';
 import { useAuthStore }          from '@/stores/auth.js';
@@ -508,13 +521,23 @@ function toggleSection(id) {
   expandedSections.value[id] = !(expandedSections.value[id] ?? allExpanded.value);
 }
 
-// ── Dynamic icon system ───────────────────────────────────────────────────────
-// Priority: mimeType → file extension from URL → resource type fallback
+// ── AI Study Assistant ────────────────────────────────────────────────────────
+const AI_SUPPORTED = new Set([
+  'application/pdf',
+  'text/plain', 'text/html', 'text/csv', 'text/markdown',
+  'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+]);
+const showAI     = ref(false);
+const aiResource = ref(null);
+function openAI(res) { aiResource.value = res; showAI.value = true; }
+function canAI(res)  { return !!res.fileUrl && !!res.mimeType && AI_SUPPORTED.has(res.mimeType); }
 
+// ── Dynamic icon system ───────────────────────────────────────────────────────
 // Section type → icon (used in section headers)
 function sectionIcon(type) {
   return { general: Megaphone, week: Calendar, module: FileText, announcement: Megaphone }[type] ?? Calendar;
 }
+
 
 const MIME_ICONS = [
   // PowerPoint
@@ -597,22 +620,14 @@ function isDownloadable(res) {
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
-async function downloadSingle(resource) {
-  try {
-    const res  = await fetch(`${BASE_URL}/api/content/download/${resource._id}`);
-    if (!res.ok) return;
-    const blob    = await res.blob();
-    const blobUrl = URL.createObjectURL(blob);
-    const a       = document.createElement('a');
-    a.href        = blobUrl;
-    a.download    = resource.title;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
-  } catch (e) {
-    console.error('Download failed:', e);
-  }
+// Simple anchor click — the server's Content-Disposition: attachment
+// forces a download without any CORS requirement.
+function downloadSingle(resource) {
+  const a = document.createElement('a');
+  a.href = `${BASE_URL}/api/content/download/${resource._id}`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
 }
 
 // ── Date formatter ────────────────────────────────────────────────────────────

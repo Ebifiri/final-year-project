@@ -24,19 +24,13 @@ const groupLabel = computed(() => {
     : `${cart.count} file${cart.count !== 1 ? 's' : ''}`;
 });
 
-async function downloadOne(resource) {
+function downloadOne(resource) {
   const url = `${BASE_URL}/api/content/download/${resource._id}`;
-  const res  = await fetch(url);
-  if (!res.ok) return;
-  const blob    = await res.blob();
-  const blobUrl = URL.createObjectURL(blob);
-  const a       = document.createElement('a');
-  a.href        = blobUrl;
-  a.download    = resource.title;
+  const a   = document.createElement('a');
+  a.href    = url;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
 }
 
 async function downloadAll() {
@@ -44,9 +38,8 @@ async function downloadAll() {
   downloading.value  = true;
   downloadDone.value = false;
   for (const resource of cart.items) {
-    await downloadOne(resource);
-    // Small gap so the browser isn't overwhelmed
-    await new Promise(r => setTimeout(r, 600));
+    downloadOne(resource);
+    await new Promise(r => setTimeout(r, 800));
   }
   downloading.value  = false;
   downloadDone.value = true;
