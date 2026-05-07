@@ -10,10 +10,13 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 async function request(path, options = {}) {
   const token = localStorage.getItem('pau_token');
 
+  // Don't force Content-Type for FormData — browser sets it with the correct boundary
+  const isFormData = options.body instanceof FormData;
+
   const res = await fetch(`${BASE_URL}${path}`, {
     ...options,
     headers: {
-      'Content-Type': 'application/json',
+      ...(!isFormData ? { 'Content-Type': 'application/json' } : {}),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...options.headers,
     },
@@ -29,8 +32,9 @@ async function request(path, options = {}) {
 }
 
 export const api = {
-  get:    (path)         => request(path),
-  post:   (path, body)   => request(path, { method: 'POST',   body: JSON.stringify(body) }),
-  patch:  (path, body)   => request(path, { method: 'PATCH',  body: JSON.stringify(body) }),
-  delete: (path)         => request(path, { method: 'DELETE' }),
+  get:      (path)         => request(path),
+  post:     (path, body)   => request(path, { method: 'POST',   body: JSON.stringify(body) }),
+  postForm: (path, form)   => request(path, { method: 'POST',   body: form }),   // FormData
+  patch:    (path, body)   => request(path, { method: 'PATCH',  body: JSON.stringify(body) }),
+  delete:   (path)         => request(path, { method: 'DELETE' }),
 };
