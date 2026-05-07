@@ -63,7 +63,15 @@ router.post('/:courseCode/sections', protect, async (req, res) => {
 // ── POST /api/content/sections/:sectionId/resources  — lecturer/admin only ────
 router.post('/sections/:sectionId/resources',
   protect,
-  upload.single('file'),
+  // Run multer manually so upload errors surface as JSON responses
+  (req, res, next) => {
+    upload.single('file')(req, res, (err) => {
+      if (err) {
+        return res.status(400).json({ message: err.message || 'File upload failed' });
+      }
+      next();
+    });
+  },
   async (req, res) => {
     try {
       const section = await Section.findById(req.params.sectionId).populate('courseId');
@@ -80,21 +88,22 @@ router.post('/sections/:sectionId/resources',
         courseId:   section.courseId._id,
         title,
         type,
-        externalUrl: externalUrl || undefined,
+        externalUrl:   externalUrl   || undefined,
         assignmentRef: assignmentRef || undefined,
-        quizRef:       quizRef || undefined,
-        uploadedBy: req.user._id,
-        order: count,
+        quizRef:       quizRef       || undefined,
+        uploadedBy:    req.user._id,
+        order:         count,
       };
 
       if (req.file) {
-        resourceData.fileUrl      = req.file.path;        // Cloudinary URL
-        resourceData.filePublicId = req.file.filename;    // Cloudinary public_id
+        resourceData.fileUrl      = req.file.path;      // Cloudinary secure URL
+        resourceData.filePublicId = req.file.filename;  // Cloudinary public_id
       }
 
       const resource = await Resource.create(resourceData);
       res.status(201).json({ resource });
     } catch (err) {
+      console.error('Resource creation error:', err);
       res.status(500).json({ message: err.message });
     }
   }

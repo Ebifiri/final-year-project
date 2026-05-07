@@ -557,6 +557,7 @@ function onFileChange(e) {
 async function saveResource() {
   if (!newResource.value.title.trim() || !activeSection.value) return;
   savingResource.value = true;
+  resourceUploadError.value = '';
   try {
     const fd = new FormData();
     fd.append('title', newResource.value.title.trim());
@@ -568,7 +569,7 @@ async function saveResource() {
     showAddResource.value = false;
     await loadContent();
   } catch (e) {
-    console.error('Add resource failed:', e);
+    resourceUploadError.value = e.message || 'Upload failed. Please try again.';
   } finally {
     savingResource.value = false;
   }
