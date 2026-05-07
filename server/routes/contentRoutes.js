@@ -15,8 +15,50 @@ async function canManageCourse(userId, userRole, courseCode) {
   return course?.lecturers?.some(id => id.equals(userId)) ?? false;
 }
 
+// ── GET /api/content/download/:resourceId  — public, CORS wildcard ───────────
+// IMPORTANT: Must be registered BEFORE /:courseCode to avoid Express treating
+// "download" as a course code wildcard.
+// No auth token needed. CORS is set to * so cross-origin fetch+blob works
+// from any frontend (e.g. Netlify → Render).
+router.get('/download/:resourceId', async (req, res) => {
+  try {
+    // Allow any origin — needed for cross-origin fetch+blob in the browser
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET');
+
+    const resource = await Resource.findById(req.params.resourceId);
+    if (!resource || !resource.fileUrl) {
+      return res.status(404).json({ message: 'Resource not found or has no file' });
+    }
+
+    // Fetch raw bytes from Cloudinary (no transformations — avoids binary corruption)
+    const upstream = await fetch(resource.fileUrl);
+    if (!upstream.ok) {
+      return res.status(502).json({ message: 'Failed to fetch file from storage' });
+    }
+
+    // Build a human-readable filename: "<resource title>.<original extension>"
+    const urlBasename = resource.fileUrl.split('?')[0].split('/').pop() ?? '';
+    const ext         = urlBasename.includes('.') ? urlBasename.split('.').pop() : '';
+    const safeName    = resource.title + (ext ? `.${ext}` : '');
+
+    // Set response headers
+    res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(safeName)}`);
+    res.setHeader('Content-Type', resource.mimeType || upstream.headers.get('content-type') || 'application/octet-stream');
+    const contentLength = upstream.headers.get('content-length');
+    if (contentLength) res.setHeader('Content-Length', contentLength);
+
+    // Stream bytes to client unchanged
+    const { Readable } = await import('stream');
+    Readable.fromWeb(upstream.body).pipe(res);
+
+  } catch (err) {
+    console.error('Download proxy error:', err);
+    if (!res.headersSent) res.status(500).json({ message: err.message });
+  }
+});
+
 // ── GET /api/content/:courseCode  — public ────────────────────────────────────
-// Returns all sections with their resources, sorted by order
 router.get('/:courseCode', async (req, res) => {
   try {
     const course = await Course.findOne({ code: req.params.courseCode.toUpperCase() });
@@ -51,7 +93,7 @@ router.post('/:courseCode/sections', protect, async (req, res) => {
     if (!allowed) return res.status(403).json({ message: 'Not authorised' });
 
     const { title, type } = req.body;
-    const count  = await Section.countDocuments({ courseId: course._id });
+    const count   = await Section.countDocuments({ courseId: course._id });
     const section = await Section.create({ courseId: course._id, title, type: type || 'week', order: count });
 
     res.status(201).json({ section });
@@ -84,8 +126,8 @@ router.post('/sections/:sectionId/resources',
       const count = await Resource.countDocuments({ sectionId: section._id });
 
       const resourceData = {
-        sectionId:  section._id,
-        courseId:   section.courseId._id,
+        sectionId:     section._id,
+        courseId:      section.courseId._id,
         title,
         type,
         externalUrl:   externalUrl   || undefined,
@@ -119,7 +161,6 @@ router.delete('/sections/:sectionId', protect, async (req, res) => {
     const allowed = await canManageCourse(req.user._id, req.user.role, section.courseId.code);
     if (!allowed) return res.status(403).json({ message: 'Not authorised' });
 
-    // Remove all resources in this section first
     await Resource.deleteMany({ sectionId: section._id });
     await section.deleteOne();
 
@@ -148,41 +189,6 @@ router.delete('/resources/:resourceId', protect, async (req, res) => {
   }
 });
 
-// ── GET /api/content/download/:resourceId  — public proxy, no auth required ───
-// Browser <a> links can't send Authorization headers, so we skip protect here.
-// Resource ObjectIDs (24-char hex) are effectively unguessable, and the
-// underlying Cloudinary files are already publicly accessible.
-router.get('/download/:resourceId', async (req, res) => {
-  try {
-    const resource = await Resource.findById(req.params.resourceId);
-    if (!resource || !resource.fileUrl) {
-      return res.status(404).json({ message: 'Resource not found or has no file' });
-    }
-
-    // Fetch the raw file from its storage URL (Cloudinary or local)
-    const upstream = await fetch(resource.fileUrl);
-    if (!upstream.ok) {
-      return res.status(502).json({ message: 'Failed to fetch file from storage' });
-    }
-
-    // Derive a clean filename
-    const urlFilename = resource.fileUrl.split('?')[0].split('/').pop() ?? '';
-    const filename    = urlFilename || `${resource.title}`;
-
-    // Set download headers
-    res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`);
-    res.setHeader('Content-Type', resource.mimeType || upstream.headers.get('content-type') || 'application/octet-stream');
-    const contentLength = upstream.headers.get('content-length');
-    if (contentLength) res.setHeader('Content-Length', contentLength);
-
-    // Stream the file body — no modification to the binary
-    const { Readable } = await import('stream');
-    Readable.fromWeb(upstream.body).pipe(res);
-
-  } catch (err) {
-    console.error('Download proxy error:', err);
-    res.status(500).json({ message: err.message });
-  }
-});
+// (download route is registered above, before /:courseCode)
 
 export default router;
