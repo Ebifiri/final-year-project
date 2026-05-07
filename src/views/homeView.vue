@@ -90,16 +90,13 @@ import { computed, onMounted } from 'vue';
 import { RouterLink } from 'vue-router';
 import { ArrowRight, BookOpen } from 'lucide-vue-next';
 import { useCourseStore } from '@/stores/courses.js';
-import { useAuthStore }   from '@/stores/auth.js';
 
 const courseStore     = useCourseStore();
-const auth            = useAuthStore();
 const loading         = computed(() => courseStore.loading);
 const featuredCourses = computed(() => courseStore.courses.slice(0, 6));
 
 onMounted(() => {
-  if (auth.isLoggedIn) {
-    courseStore.fetchCourses();
-  }
+  // API is public — fetch for all visitors
+  courseStore.fetchCourses();
 });
 </script>
