@@ -135,27 +135,49 @@ router.get('/me', protect, (req, res) => {
 });
 
 // ── Google OAuth routes ───────────────────────────────────────────────────────
-router.get('/google',
-  passport.authenticate('google', { scope: ['profile', 'email'], session: false })
-);
-router.get('/google/callback',
-  passport.authenticate('google', { session: false, failureRedirect: `${process.env.FRONTEND_URL}/login?error=oauth` }),
-  (req, res) => {
-    const token = signToken(req.user._id);
-    res.redirect(`${process.env.FRONTEND_URL}/auth/callback?token=${token}`);
+const googleConfigured = !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
+
+router.get('/google', (req, res, next) => {
+  if (!googleConfigured) {
+    return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/login?error=oauth_not_configured`);
   }
-);
+  passport.authenticate('google', { scope: ['profile', 'email'], session: false })(req, res, next);
+});
+
+router.get('/google/callback', (req, res, next) => {
+  if (!googleConfigured) {
+    return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/login?error=oauth_not_configured`);
+  }
+  passport.authenticate('google', {
+    session: false,
+    failureRedirect: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/login?error=oauth`,
+  })(req, res, next);
+}, (req, res) => {
+  const token = signToken(req.user._id);
+  res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/auth/callback?token=${token}`);
+});
 
 // ── Microsoft OAuth routes ────────────────────────────────────────────────────
-router.get('/microsoft',
-  passport.authenticate('microsoft', { session: false })
-);
-router.get('/microsoft/callback',
-  passport.authenticate('microsoft', { session: false, failureRedirect: `${process.env.FRONTEND_URL}/login?error=oauth` }),
-  (req, res) => {
-    const token = signToken(req.user._id);
-    res.redirect(`${process.env.FRONTEND_URL}/auth/callback?token=${token}`);
+const microsoftConfigured = !!(process.env.MICROSOFT_CLIENT_ID && process.env.MICROSOFT_CLIENT_SECRET);
+
+router.get('/microsoft', (req, res, next) => {
+  if (!microsoftConfigured) {
+    return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/login?error=oauth_not_configured`);
   }
-);
+  passport.authenticate('microsoft', { session: false })(req, res, next);
+});
+
+router.get('/microsoft/callback', (req, res, next) => {
+  if (!microsoftConfigured) {
+    return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/login?error=oauth_not_configured`);
+  }
+  passport.authenticate('microsoft', {
+    session: false,
+    failureRedirect: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/login?error=oauth`,
+  })(req, res, next);
+}, (req, res) => {
+  const token = signToken(req.user._id);
+  res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/auth/callback?token=${token}`);
+});
 
 export default router;

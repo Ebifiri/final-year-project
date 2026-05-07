@@ -33,7 +33,7 @@
 
           <!-- Email -->
           <div class="flex flex-col gap-1.5">
-            <label class="text-sm font-medium text-slate-700">PAU Email Address</label>
+            <label class="text-sm font-medium text-slate-700">Email Address</label>
             <input
               v-model="email"
               type="email"

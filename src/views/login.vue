@@ -50,7 +50,10 @@
           <p v-if="auth.error" class="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
             {{ auth.error }}
           </p>
-          <p v-if="oauthError" class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+          <p v-if="oauthError === 'not_configured'" class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+            OAuth sign-in hasn't been configured on this server yet. Please use email/password.
+          </p>
+          <p v-else-if="oauthError" class="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
             OAuth sign-in failed. Please try again or use email/password.
           </p>
 
@@ -135,7 +138,12 @@ const route       = useRoute();
 const auth        = useAuthStore();
 const email       = ref('');
 const password    = ref('');
-const oauthError  = computed(() => route.query.error === 'oauth');
+const oauthError = computed(() => {
+  const e = route.query.error;
+  if (e === 'oauth_not_configured') return 'not_configured';
+  if (e === 'oauth') return 'failed';
+  return null;
+});
 
 async function handleLogin() {
   const ok = await auth.login(email.value, password.value);
