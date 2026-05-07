@@ -4,11 +4,113 @@
     <!-- Page heading -->
     <div class="mb-6">
       <h1 class="text-2xl font-bold text-slate-900">Dashboard</h1>
-      <p class="text-sm text-slate-500 mt-1">Welcome back, {{ auth.user?.name?.split(' ')[0] ?? 'Student' }} 👋</p>
+      <p class="text-sm text-slate-500 mt-1">Welcome back, {{ auth.user?.name?.split(' ')[0] ?? 'User' }} 👋</p>
     </div>
 
-    <!-- Two-column grid -->
-    <div class="grid grid-cols-1 xl:grid-cols-3 gap-8 items-start">
+    <!-- ── LECTURER / ADMIN VIEW ─────────────────────────────────────────────── -->
+    <div v-if="isLecturer" class="flex flex-col gap-8">
+
+      <!-- Stats bar -->
+      <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex items-center gap-4">
+          <div class="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center flex-shrink-0">
+            <BookOpen class="w-5 h-5 text-indigo-500" />
+          </div>
+          <div>
+            <p class="text-2xl font-extrabold text-slate-900">{{ lecturerCourses.length }}</p>
+            <p class="text-xs text-slate-400 font-medium">Courses Teaching</p>
+          </div>
+        </div>
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex items-center gap-4">
+          <div class="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center flex-shrink-0">
+            <Users class="w-5 h-5 text-emerald-500" />
+          </div>
+          <div>
+            <p class="text-2xl font-extrabold text-slate-900">{{ lecturerCourses.length > 0 ? '—' : '0' }}</p>
+            <p class="text-xs text-slate-400 font-medium">Students Enrolled</p>
+          </div>
+        </div>
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex items-center gap-4 col-span-2 sm:col-span-1">
+          <div class="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center flex-shrink-0">
+            <GraduationCap class="w-5 h-5 text-amber-500" />
+          </div>
+          <div>
+            <p class="text-xs font-semibold text-slate-700">{{ auth.user?.name }}</p>
+            <p class="text-xs text-slate-400 font-medium capitalize">{{ auth.user?.role }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- My Courses section -->
+      <section>
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-sm font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+            <Presentation class="w-4 h-4" /> My Courses
+          </h2>
+          <span class="text-xs text-slate-400">{{ lecturerCourses.length }} course{{ lecturerCourses.length !== 1 ? 's' : '' }}</span>
+        </div>
+
+        <!-- Loading skeleton -->
+        <div v-if="lecturerLoading" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div v-for="i in 8" :key="i" class="bg-white rounded-xl border border-slate-200 h-36 animate-pulse" />
+        </div>
+
+        <!-- Empty state -->
+        <div v-else-if="lecturerCourses.length === 0" class="flex flex-col items-center justify-center py-16 bg-white rounded-xl border border-slate-200 border-dashed text-center">
+          <Presentation class="w-10 h-10 text-slate-300 mb-3" />
+          <p class="text-sm font-semibold text-slate-600">No courses assigned yet</p>
+          <p class="text-xs text-slate-400 mt-1">Contact an administrator to be assigned to courses.</p>
+        </div>
+
+        <!-- Course grid -->
+        <div v-else class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+          <RouterLink
+            v-for="c in paginatedLecturerCourses"
+            :key="c.code"
+            :to="'/courses/' + c.code"
+            class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden group hover:shadow-md hover:border-blue-200 transition-all"
+          >
+            <!-- Colour band -->
+            <div :class="['h-24 flex items-end p-3 relative overflow-hidden', c.color]">
+              <div class="absolute inset-0 bg-black/10"></div>
+              <Presentation class="absolute top-3 right-3 w-5 h-5 text-white/60" />
+              <span class="relative text-[11px] font-bold text-white bg-black/25 px-2 py-0.5 rounded">{{ c.code }}</span>
+            </div>
+            <!-- Body -->
+            <div class="p-3">
+              <p class="text-xs font-semibold text-slate-800 leading-snug line-clamp-2 group-hover:text-blue-700 transition-colors">{{ c.title }}</p>
+              <p class="text-[11px] text-slate-400 mt-1 truncate">{{ c.dept }}</p>
+              <span class="mt-2 inline-flex items-center gap-1 text-[10px] font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
+                <PenLine class="w-2.5 h-2.5" /> Teaching
+              </span>
+            </div>
+          </RouterLink>
+        </div>
+
+        <!-- Pagination -->
+        <div v-if="lecturerTotalPages > 1" class="flex items-center justify-center gap-1.5 mt-5">
+          <button
+            class="p-1.5 rounded-lg text-slate-400 hover:bg-slate-200 hover:text-slate-700 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+            :disabled="lecturerPage === 1"
+            @click="lecturerPage--"
+          ><ChevronLeft class="w-4 h-4" /></button>
+          <button
+            v-for="p in lecturerTotalPages"
+            :key="p"
+            :class="['w-8 h-8 rounded-lg text-sm font-semibold transition-colors', lecturerPage === p ? 'bg-[#1e293b] text-white' : 'text-slate-500 hover:bg-slate-200']"
+            @click="lecturerPage = p"
+          >{{ p }}</button>
+          <button
+            class="p-1.5 rounded-lg text-slate-400 hover:bg-slate-200 hover:text-slate-700 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+            :disabled="lecturerPage === lecturerTotalPages"
+            @click="lecturerPage++"
+          ><ChevronRight class="w-4 h-4" /></button>
+        </div>
+      </section>
+    </div>
+
+    <!-- ── STUDENT VIEW ──────────────────────────────────────────────────────── -->
+    <div v-else class="grid grid-cols-1 xl:grid-cols-3 gap-8 items-start">
 
       <!-- ── LEFT COLUMN (2/3 width) ───────────────────────────── -->
       <div class="xl:col-span-2 flex flex-col gap-8">
@@ -18,7 +120,6 @@
           <h2 class="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
             <Clock class="w-4 h-4" /> Recently Accessed
           </h2>
-          <!-- Empty state -->
           <div v-if="!enrollmentStore.loading && recentCourses.length === 0" class="flex flex-col items-center justify-center py-10 bg-white rounded-xl border border-slate-200 border-dashed text-center">
             <Clock class="w-8 h-8 text-slate-300 mb-2" />
             <p class="text-sm font-medium text-slate-500">No recently accessed courses</p>
@@ -53,7 +154,6 @@
             <span class="text-xs text-slate-400">{{ enrolledCourses.length }} courses</span>
           </div>
 
-          <!-- Empty state -->
           <div v-if="!enrollmentStore.loading && paginatedCourses.length === 0" class="flex flex-col items-center justify-center py-16 bg-white rounded-xl border border-slate-200 border-dashed text-center">
             <BookOpen class="w-10 h-10 text-slate-300 mb-3" />
             <p class="text-sm font-semibold text-slate-600">You have no courses enrolled currently</p>
@@ -61,14 +161,12 @@
             <RouterLink to="/courses" class="mt-3 px-4 py-2 bg-[#1e293b] text-white text-xs font-bold rounded-lg hover:bg-slate-700 transition-colors">Browse Courses</RouterLink>
           </div>
 
-          <!-- 4-column grid -->
           <div v-else class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
             <div
               v-for="c in paginatedCourses"
               :key="c.code"
               class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden group"
             >
-              <!-- Top colour band - clickable -->
               <RouterLink :to="'/courses/' + c.code">
                 <div :class="['h-24 flex items-end p-3 relative overflow-hidden cursor-pointer hover:opacity-90 transition-opacity', c.color]">
                   <div class="absolute inset-0 bg-black/10"></div>
@@ -76,13 +174,11 @@
                   <span class="relative text-[11px] font-bold text-white bg-black/25 px-2 py-0.5 rounded">{{ c.code }}</span>
                 </div>
               </RouterLink>
-              <!-- Body -->
               <div class="p-3">
                 <RouterLink :to="'/courses/' + c.code">
                   <p class="text-xs font-semibold text-slate-800 leading-snug line-clamp-2 hover:text-blue-700 transition-colors">{{ c.title }}</p>
                 </RouterLink>
                 <p class="text-[11px] text-slate-400 mt-1">{{ c.faculty }}</p>
-                <!-- Unenroll button -->
                 <button
                   class="mt-2.5 w-full text-[11px] font-semibold text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg py-1.5 transition-colors border border-transparent hover:border-red-200"
                   @click="unenroll(c._id)"
@@ -95,29 +191,9 @@
 
           <!-- Pagination -->
           <div v-if="totalPages > 1" class="flex items-center justify-center gap-1.5 mt-5">
-            <button
-              class="p-1.5 rounded-lg text-slate-400 hover:bg-slate-200 hover:text-slate-700 transition-colors disabled:opacity-30 disabled:pointer-events-none"
-              :disabled="coursePage === 1"
-              @click="coursePage--"
-            ><ChevronLeft class="w-4 h-4" /></button>
-
-            <button
-              v-for="p in totalPages"
-              :key="p"
-              :class="[
-                'w-8 h-8 rounded-lg text-sm font-semibold transition-colors',
-                coursePage === p
-                  ? 'bg-[#1e293b] text-white'
-                  : 'text-slate-500 hover:bg-slate-200'
-              ]"
-              @click="coursePage = p"
-            >{{ p }}</button>
-
-            <button
-              class="p-1.5 rounded-lg text-slate-400 hover:bg-slate-200 hover:text-slate-700 transition-colors disabled:opacity-30 disabled:pointer-events-none"
-              :disabled="coursePage === totalPages"
-              @click="coursePage++"
-            ><ChevronRight class="w-4 h-4" /></button>
+            <button class="p-1.5 rounded-lg text-slate-400 hover:bg-slate-200 hover:text-slate-700 transition-colors disabled:opacity-30 disabled:pointer-events-none" :disabled="coursePage === 1" @click="coursePage--"><ChevronLeft class="w-4 h-4" /></button>
+            <button v-for="p in totalPages" :key="p" :class="['w-8 h-8 rounded-lg text-sm font-semibold transition-colors', coursePage === p ? 'bg-[#1e293b] text-white' : 'text-slate-500 hover:bg-slate-200']" @click="coursePage = p">{{ p }}</button>
+            <button class="p-1.5 rounded-lg text-slate-400 hover:bg-slate-200 hover:text-slate-700 transition-colors disabled:opacity-30 disabled:pointer-events-none" :disabled="coursePage === totalPages" @click="coursePage++"><ChevronRight class="w-4 h-4" /></button>
           </div>
         </section>
       </div>
@@ -130,43 +206,21 @@
           <div class="flex items-center justify-between mb-4">
             <span class="text-sm font-bold text-slate-800">{{ monthName }} {{ year }}</span>
             <div class="flex gap-1">
-              <button
-                class="p-1 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
-                @click="prevMonth"
-              ><ChevronLeft class="w-4 h-4" /></button>
-              <button
-                class="p-1 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
-                @click="nextMonth"
-              ><ChevronRight class="w-4 h-4" /></button>
+              <button class="p-1 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors" @click="prevMonth"><ChevronLeft class="w-4 h-4" /></button>
+              <button class="p-1 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors" @click="nextMonth"><ChevronRight class="w-4 h-4" /></button>
             </div>
           </div>
-
-          <!-- Day headers -->
           <div class="grid grid-cols-7 mb-1">
-            <span
-              v-for="d in ['S','M','T','W','T','F','S']"
-              :key="d"
-              class="text-center text-[10px] font-bold text-slate-400"
-            >{{ d }}</span>
+            <span v-for="d in ['S','M','T','W','T','F','S']" :key="d" class="text-center text-[10px] font-bold text-slate-400">{{ d }}</span>
           </div>
-
-          <!-- Day cells -->
           <div class="grid grid-cols-7 gap-y-0.5">
             <span v-for="n in startDay" :key="'bl'+n" />
             <button
               v-for="day in daysInMonth"
               :key="day"
-              :class="[
-                'mx-auto w-7 h-7 rounded-full text-xs flex items-center justify-center transition-colors',
-                isToday(day)
-                  ? 'bg-[#1e293b] text-white font-bold'
-                  : hasDue(day)
-                    ? 'bg-blue-100 text-blue-700 font-semibold hover:bg-blue-200'
-                    : 'text-slate-600 hover:bg-slate-100',
-              ]"
+              :class="['mx-auto w-7 h-7 rounded-full text-xs flex items-center justify-center transition-colors', isToday(day) ? 'bg-[#1e293b] text-white font-bold' : hasDue(day) ? 'bg-blue-100 text-blue-700 font-semibold hover:bg-blue-200' : 'text-slate-600 hover:bg-slate-100']"
             >{{ day }}</button>
           </div>
-
           <div class="flex gap-3 mt-3 text-[11px] text-slate-500">
             <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-[#1e293b] inline-block"></span>Today</span>
             <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-blue-200 inline-block"></span>Due</span>
@@ -178,25 +232,14 @@
           <h2 class="text-sm font-bold text-slate-500 uppercase tracking-wider mb-4 flex items-center gap-2">
             <ListTodo class="w-4 h-4" /> Upcoming Deadlines
           </h2>
-
-          <!-- Empty state -->
           <div v-if="tasks.length === 0" class="flex flex-col items-center py-8 text-center">
             <ListTodo class="w-8 h-8 text-slate-200 mb-2" />
             <p class="text-sm text-slate-400 font-medium">No upcoming deadlines</p>
           </div>
-
           <div v-else class="relative flex flex-col gap-0">
-            <!-- Timeline line -->
             <div class="absolute left-[15px] top-4 bottom-4 w-px bg-slate-100"></div>
-
-            <div
-              v-for="t in tasks"
-              :key="t.id"
-              class="relative flex gap-4 pb-5 last:pb-0"
-            >
-              <!-- Dot -->
+            <div v-for="t in tasks" :key="t.id" class="relative flex gap-4 pb-5 last:pb-0">
               <div :class="['w-[10px] h-[10px] rounded-full mt-1.5 flex-shrink-0 ml-[10px] border-2 border-white ring-2', urgencyRing[t.urgency]]"></div>
-
               <div class="flex-1 min-w-0">
                 <p class="text-sm font-semibold text-slate-800 leading-snug">{{ t.title }}</p>
                 <p class="text-xs text-slate-400 mt-0.5">{{ t.course }}</p>
@@ -219,21 +262,57 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
+import { RouterLink } from 'vue-router';
 import {
   Clock, BookOpen, ChevronLeft, ChevronRight,
   ListTodo, MonitorPlay, CalendarDays,
+  Users, GraduationCap, Presentation, PenLine,
 } from 'lucide-vue-next';
 import { useEnrollmentStore } from '@/stores/enrollments.js';
 import { useAuthStore }       from '@/stores/auth.js';
+import { api }                from '@/api/client.js';
 
 const auth            = useAuthStore();
 const enrollmentStore = useEnrollmentStore();
 
-onMounted(() => {
-  enrollmentStore.fetchEnrollments();
+const isLecturer = computed(() => ['lecturer', 'admin'].includes(auth.user?.role));
+
+onMounted(async () => {
+  if (isLecturer.value) {
+    await fetchLecturerCourses();
+  } else {
+    enrollmentStore.fetchEnrollments();
+  }
 });
 
-// ── Recently Accessed ─────────────────────────────────────────────────────────
+// ── Lecturer courses ───────────────────────────────────────────────────────────
+const lecturerCourses  = ref([]);
+const lecturerLoading  = ref(false);
+const lecturerPage     = ref(1);
+const LECTURER_PAGE_SIZE = 12;
+
+const lecturerTotalPages = computed(() =>
+  Math.ceil(lecturerCourses.value.length / LECTURER_PAGE_SIZE) || 1
+);
+const paginatedLecturerCourses = computed(() => {
+  const start = (lecturerPage.value - 1) * LECTURER_PAGE_SIZE;
+  return lecturerCourses.value.slice(start, start + LECTURER_PAGE_SIZE);
+});
+
+async function fetchLecturerCourses() {
+  lecturerLoading.value = true;
+  try {
+    const data = await api.get('/api/courses/my');
+    lecturerCourses.value = data.courses ?? [];
+  } catch (e) {
+    console.error('Failed to load lecturer courses:', e);
+    lecturerCourses.value = [];
+  } finally {
+    lecturerLoading.value = false;
+  }
+}
+
+// ── Student: recently accessed ────────────────────────────────────────────────
 const recentCourses = computed(() =>
   enrollmentStore.recentEnrollments.map(e => ({
     code:     e.course?.code     ?? '',
@@ -243,7 +322,7 @@ const recentCourses = computed(() =>
   }))
 );
 
-// ── Enrolled Courses ──────────────────────────────────────────────────────────
+// ── Student: enrolled courses ─────────────────────────────────────────────────
 const enrolledCourses = computed(() =>
   enrollmentStore.enrollments.map(e => ({
     _id:      e._id,
@@ -266,7 +345,6 @@ const paginatedCourses = computed(() => {
 async function unenroll(enrollmentId) {
   await enrollmentStore.unenroll(enrollmentId);
 }
-
 
 // ── Calendar ──────────────────────────────────────────────────────────────────
 const today        = new Date();
@@ -303,7 +381,7 @@ function nextMonth() {
   else currentMonth.value++;
 }
 
-// ── Tasks (empty by default — will be wired to API in future) ───────────────
+// ── Tasks (empty by default) ──────────────────────────────────────────────────
 const tasks = ref([]);
 
 const urgencyRing = {
@@ -327,9 +405,9 @@ function formatRelative(dateStr) {
   const mins  = Math.floor(diff / 60000);
   const hours = Math.floor(diff / 3600000);
   const days  = Math.floor(diff / 86400000);
-  if (mins < 60)  return `${mins}m ago`;
-  if (hours < 24) return `${hours}h ago`;
-  if (days === 1) return 'Yesterday';
+  if (mins  < 60)  return `${mins}m ago`;
+  if (hours < 24)  return `${hours}h ago`;
+  if (days === 1)  return 'Yesterday';
   return `${days} days ago`;
 }
 </script>

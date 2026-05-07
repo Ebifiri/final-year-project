@@ -100,4 +100,42 @@ router.post('/sections/:sectionId/resources',
   }
 );
 
+// ── DELETE /api/content/sections/:sectionId  — lecturer/admin only ────────────
+router.delete('/sections/:sectionId', protect, async (req, res) => {
+  try {
+    const section = await Section.findById(req.params.sectionId).populate('courseId');
+    if (!section) return res.status(404).json({ message: 'Section not found' });
+
+    const allowed = await canManageCourse(req.user._id, req.user.role, section.courseId.code);
+    if (!allowed) return res.status(403).json({ message: 'Not authorised' });
+
+    // Remove all resources in this section first
+    await Resource.deleteMany({ sectionId: section._id });
+    await section.deleteOne();
+
+    res.json({ message: 'Section deleted' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// ── DELETE /api/content/resources/:resourceId  — lecturer/admin only ──────────
+router.delete('/resources/:resourceId', protect, async (req, res) => {
+  try {
+    const resource = await Resource.findById(req.params.resourceId).populate({
+      path: 'sectionId',
+      populate: { path: 'courseId' },
+    });
+    if (!resource) return res.status(404).json({ message: 'Resource not found' });
+
+    const allowed = await canManageCourse(req.user._id, req.user.role, resource.sectionId.courseId.code);
+    if (!allowed) return res.status(403).json({ message: 'Not authorised' });
+
+    await resource.deleteOne();
+    res.json({ message: 'Resource deleted' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 export default router;

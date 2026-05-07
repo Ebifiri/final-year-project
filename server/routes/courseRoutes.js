@@ -4,6 +4,20 @@ import protect from '../middleware/auth.js';
 
 const router = express.Router();
 
+// ── GET /api/courses/my  — lecturer/admin only ────────────────────────────────
+// Returns all courses where the current user is listed as a lecturer
+router.get('/my', protect, async (req, res) => {
+  try {
+    if (!['lecturer', 'admin'].includes(req.user.role)) {
+      return res.status(403).json({ message: 'Not authorised' });
+    }
+    const courses = await Course.find({ lecturers: req.user._id }).sort({ code: 1 });
+    res.json({ courses });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // ── GET /api/courses ──────────────────────────────────────────────────────────
 // Public — no auth required to browse courses
 router.get('/', async (req, res) => {

@@ -139,18 +139,30 @@
                     <p class="text-[11px] text-slate-400">{{ sec.resources.length }} item{{ sec.resources.length !== 1 ? 's' : '' }}</p>
                   </div>
                 </div>
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-1">
                   <!-- Add resource button (lecturer/admin only) -->
                   <span
                     v-if="canManage"
                     role="button"
                     tabindex="0"
-                    class="p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-blue-600 transition-colors"
+                    class="p-1 rounded hover:bg-blue-50 text-slate-400 hover:text-blue-600 transition-colors"
                     title="Add resource to this section"
                     @click.stop="openAddResource(sec)"
                     @keydown.enter.stop="openAddResource(sec)"
                   >
                     <PlusCircle class="w-4 h-4" />
+                  </span>
+                  <!-- Delete section button (lecturer/admin only) -->
+                  <span
+                    v-if="canManage"
+                    role="button"
+                    tabindex="0"
+                    class="p-1 rounded hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors"
+                    title="Delete this section"
+                    @click.stop="confirmDelete('section', sec)"
+                    @keydown.enter.stop="confirmDelete('section', sec)"
+                  >
+                    <Trash2 class="w-4 h-4" />
                   </span>
                   <ChevronDown
                     :class="['w-4 h-4 text-slate-400 transition-transform flex-shrink-0', (expandedSections[sec._id] ?? allExpanded) ? 'rotate-180' : '']"
@@ -160,30 +172,46 @@
 
               <!-- Resources list -->
               <div v-show="expandedSections[sec._id] ?? allExpanded" class="divide-y divide-slate-50">
-                <a
+                <div
                   v-for="res in sec.resources"
                   :key="res._id"
-                  :href="res.fileUrl || res.externalUrl || '#'"
-                  :target="res.fileUrl || res.externalUrl ? '_blank' : undefined"
-                  rel="noopener noreferrer"
                   class="flex items-start gap-3 px-5 py-3 hover:bg-blue-50 group transition-colors"
-                  @click="res.fileUrl || res.externalUrl ? undefined : $event.preventDefault()"
                 >
-                  <div :class="['w-7 h-7 mt-0.5 rounded-lg flex items-center justify-center flex-shrink-0', resourceIconBg(res.type)]">
-                    <component :is="resourceIcon(res.type)" :class="['w-3.5 h-3.5', resourceIconColor(res.type)]" />
+                  <!-- Clickable file/link area -->
+                  <a
+                    :href="res.fileUrl || res.externalUrl || '#'"
+                    :target="res.fileUrl || res.externalUrl ? '_blank' : undefined"
+                    rel="noopener noreferrer"
+                    class="flex items-start gap-3 flex-1 min-w-0"
+                    @click="res.fileUrl || res.externalUrl ? undefined : $event.preventDefault()"
+                  >
+                    <div :class="['w-7 h-7 mt-0.5 rounded-lg flex items-center justify-center flex-shrink-0', resourceIconBg(res.type)]">
+                      <component :is="resourceIcon(res.type)" :class="['w-3.5 h-3.5', resourceIconColor(res.type)]" />
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <span class="text-sm text-blue-600 group-hover:text-blue-800 group-hover:underline underline-offset-2 transition-colors leading-snug block truncate">
+                        {{ res.title }}
+                      </span>
+                      <span class="text-[10px] text-slate-400 mt-0.5 block">
+                        Uploaded {{ formatDate(res.createdAt) }}
+                      </span>
+                    </div>
+                  </a>
+                  <!-- Right-side icons -->
+                  <div class="flex items-center gap-1 mt-0.5 flex-shrink-0">
+                    <AlertCircle v-if="res.type === 'assignment'" class="w-3.5 h-3.5 text-amber-500" />
+                    <ExternalLink v-else-if="res.externalUrl" class="w-3 h-3 text-slate-300" />
+                    <!-- Delete resource (lecturer/admin, visible on hover) -->
+                    <button
+                      v-if="canManage"
+                      class="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-red-50 text-slate-300 hover:text-red-500 transition-all"
+                      title="Delete resource"
+                      @click.prevent="confirmDelete('resource', res)"
+                    >
+                      <Trash2 class="w-3.5 h-3.5" />
+                    </button>
                   </div>
-                  <div class="flex-1 min-w-0">
-                    <span class="text-sm text-blue-600 group-hover:text-blue-800 group-hover:underline underline-offset-2 transition-colors leading-snug block truncate">
-                      {{ res.title }}
-                    </span>
-                    <!-- Upload timestamp -->
-                    <span class="text-[10px] text-slate-400 mt-0.5 block">
-                      Uploaded {{ formatDate(res.createdAt) }}
-                    </span>
-                  </div>
-                  <AlertCircle v-if="res.type === 'assignment'" class="w-3.5 h-3.5 text-amber-500 flex-shrink-0 mt-1" />
-                  <ExternalLink v-else-if="res.externalUrl" class="w-3 h-3 text-slate-300 flex-shrink-0 mt-1" />
-                </a>
+                </div>
                 <p v-if="!sec.resources.length" class="px-5 py-4 text-sm text-slate-400 italic">No resources yet.</p>
               </div>
             </div>
@@ -307,6 +335,44 @@
       </div>
     </Teleport>
 
+    <!-- ── CONFIRM DELETE MODAL ──────────────────────────────────── -->
+    <Teleport to="body">
+      <div
+        v-if="showConfirmDelete"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+        @click.self="showConfirmDelete = false"
+      >
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="w-9 h-9 rounded-xl bg-red-50 flex items-center justify-center flex-shrink-0">
+              <Trash2 class="w-4 h-4 text-red-500" />
+            </div>
+            <h3 class="font-bold text-slate-800 text-base">Confirm Delete</h3>
+          </div>
+          <p class="text-sm text-slate-600 mb-1">
+            Are you sure you want to delete
+            <span class="font-semibold">"{{ deleteTarget?.title }}"</span>?
+          </p>
+          <p v-if="deleteType === 'section'" class="text-xs text-red-500 mt-1">
+            ⚠ This will also delete all resources inside this section.
+          </p>
+          <div class="flex justify-end gap-2 mt-5">
+            <button
+              class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+              @click="showConfirmDelete = false"
+            >Cancel</button>
+            <button
+              class="px-4 py-2 text-sm font-bold bg-red-500 hover:bg-red-600 text-white rounded-xl transition-colors disabled:opacity-60"
+              :disabled="deleting"
+              @click="executeDelete"
+            >
+              {{ deleting ? 'Deleting…' : 'Delete' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
   </main>
 </template>
 
@@ -317,7 +383,7 @@ import {
   ChevronDown, BookOpen, Calendar, FileText,
   Link2, ClipboardList, Megaphone, AlertCircle,
   FlaskConical, Video, BookLock, UserMinus, Loader2, LogIn,
-  Plus, PlusCircle, FolderOpen, ExternalLink,
+  Plus, PlusCircle, FolderOpen, ExternalLink, Trash2,
 } from 'lucide-vue-next';
 import { api }                   from '@/api/client.js';
 import { useEnrollmentStore }    from '@/stores/enrollments.js';
@@ -504,6 +570,37 @@ async function saveResource() {
     console.error('Add resource failed:', e);
   } finally {
     savingResource.value = false;
+  }
+}
+
+// ── Delete ────────────────────────────────────────────────────────────────────
+const showConfirmDelete = ref(false);
+const deleting          = ref(false);
+const deleteType        = ref('');   // 'section' | 'resource'
+const deleteTarget      = ref(null); // the section or resource object
+
+function confirmDelete(type, item) {
+  deleteType.value   = type;
+  deleteTarget.value = item;
+  showConfirmDelete.value = true;
+}
+
+async function executeDelete() {
+  if (!deleteTarget.value) return;
+  deleting.value = true;
+  try {
+    if (deleteType.value === 'section') {
+      await api.delete(`/api/content/sections/${deleteTarget.value._id}`);
+    } else {
+      await api.delete(`/api/content/resources/${deleteTarget.value._id}`);
+    }
+    showConfirmDelete.value = false;
+    deleteTarget.value = null;
+    await loadContent();
+  } catch (e) {
+    console.error('Delete failed:', e);
+  } finally {
+    deleting.value = false;
   }
 }
 </script>
