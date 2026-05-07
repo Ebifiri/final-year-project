@@ -11,13 +11,17 @@ router.get('/', protect, async (req, res) => {
     const { search, dept, year } = req.query;
     const filter = {};
 
-    if (dept)   filter.dept = { $regex: dept,   $options: 'i' };
-    if (year)   filter.year = { $regex: year,   $options: 'i' };
+    // Escape regex special characters so dept names like "School of Science & Tech (SST)" work correctly
+    const escape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+    if (dept)   filter.dept = { $regex: escape(dept), $options: 'i' };
+    if (year)   filter.year = { $regex: escape(year), $options: 'i' };
     if (search) {
+      const s = escape(search);
       filter.$or = [
-        { title: { $regex: search, $options: 'i' } },
-        { code:  { $regex: search, $options: 'i' } },
-        { dept:  { $regex: search, $options: 'i' } },
+        { title: { $regex: s, $options: 'i' } },
+        { code:  { $regex: s, $options: 'i' } },
+        { dept:  { $regex: s, $options: 'i' } },
       ];
     }
 

@@ -18,7 +18,13 @@
           <h2 class="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
             <Clock class="w-4 h-4" /> Recently Accessed
           </h2>
-          <div class="flex gap-4 overflow-x-auto pb-2">
+          <!-- Empty state -->
+          <div v-if="!enrollmentStore.loading && recentCourses.length === 0" class="flex flex-col items-center justify-center py-10 bg-white rounded-xl border border-slate-200 border-dashed text-center">
+            <Clock class="w-8 h-8 text-slate-300 mb-2" />
+            <p class="text-sm font-medium text-slate-500">No recently accessed courses</p>
+            <RouterLink to="/courses" class="text-xs text-blue-500 hover:underline mt-1">Browse courses →</RouterLink>
+          </div>
+          <div v-else class="flex gap-4 overflow-x-auto pb-2">
             <RouterLink
               v-for="c in recentCourses"
               :key="c.code"
@@ -47,23 +53,34 @@
             <span class="text-xs text-slate-400">{{ enrolledCourses.length }} courses</span>
           </div>
 
+          <!-- Empty state -->
+          <div v-if="!enrollmentStore.loading && paginatedCourses.length === 0" class="flex flex-col items-center justify-center py-16 bg-white rounded-xl border border-slate-200 border-dashed text-center">
+            <BookOpen class="w-10 h-10 text-slate-300 mb-3" />
+            <p class="text-sm font-semibold text-slate-600">You have no courses enrolled currently</p>
+            <p class="text-xs text-slate-400 mt-1">Head to the course catalogue to get started.</p>
+            <RouterLink to="/courses" class="mt-3 px-4 py-2 bg-[#1e293b] text-white text-xs font-bold rounded-lg hover:bg-slate-700 transition-colors">Browse Courses</RouterLink>
+          </div>
+
           <!-- 4-column grid -->
-          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            <RouterLink
+          <div v-else class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div
               v-for="c in paginatedCourses"
               :key="c.code"
-              :to="'/courses/' + c.code"
-              class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden hover:shadow-md hover:border-blue-200 transition-all cursor-pointer group"
+              class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden group"
             >
-              <!-- Top colour band -->
-              <div :class="['h-24 flex items-end p-3 relative overflow-hidden', c.color]">
-                <div class="absolute inset-0 bg-black/10"></div>
-                <MonitorPlay class="absolute top-3 right-3 w-5 h-5 text-white/60" />
-                <span class="relative text-[11px] font-bold text-white bg-black/25 px-2 py-0.5 rounded">{{ c.code }}</span>
-              </div>
+              <!-- Top colour band - clickable -->
+              <RouterLink :to="'/courses/' + c.code">
+                <div :class="['h-24 flex items-end p-3 relative overflow-hidden cursor-pointer hover:opacity-90 transition-opacity', c.color]">
+                  <div class="absolute inset-0 bg-black/10"></div>
+                  <MonitorPlay class="absolute top-3 right-3 w-5 h-5 text-white/60" />
+                  <span class="relative text-[11px] font-bold text-white bg-black/25 px-2 py-0.5 rounded">{{ c.code }}</span>
+                </div>
+              </RouterLink>
               <!-- Body -->
               <div class="p-3">
-                <p class="text-xs font-semibold text-slate-800 leading-snug line-clamp-2 group-hover:text-blue-700 transition-colors">{{ c.title }}</p>
+                <RouterLink :to="'/courses/' + c.code">
+                  <p class="text-xs font-semibold text-slate-800 leading-snug line-clamp-2 hover:text-blue-700 transition-colors">{{ c.title }}</p>
+                </RouterLink>
                 <p class="text-[11px] text-slate-400 mt-1">{{ c.faculty }}</p>
                 <!-- Progress -->
                 <div class="mt-2.5 flex items-center gap-2">
@@ -72,8 +89,15 @@
                   </div>
                   <span class="text-[11px] text-slate-400 font-medium shrink-0">{{ c.progress }}%</span>
                 </div>
+                <!-- Unenroll button -->
+                <button
+                  class="mt-2.5 w-full text-[11px] font-semibold text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg py-1.5 transition-colors border border-transparent hover:border-red-200"
+                  @click="unenroll(c._id)"
+                >
+                  Unenroll
+                </button>
               </div>
-            </RouterLink>
+            </div>
           </div>
 
           <!-- Pagination -->
@@ -162,7 +186,13 @@
             <ListTodo class="w-4 h-4" /> Upcoming Deadlines
           </h2>
 
-          <div class="relative flex flex-col gap-0">
+          <!-- Empty state -->
+          <div v-if="tasks.length === 0" class="flex flex-col items-center py-8 text-center">
+            <ListTodo class="w-8 h-8 text-slate-200 mb-2" />
+            <p class="text-sm text-slate-400 font-medium">No upcoming deadlines</p>
+          </div>
+
+          <div v-else class="relative flex flex-col gap-0">
             <!-- Timeline line -->
             <div class="absolute left-[15px] top-4 bottom-4 w-px bg-slate-100"></div>
 
@@ -240,6 +270,11 @@ const paginatedCourses = computed(() => {
   return enrolledCourses.value.slice(start, start + PAGE_SIZE);
 });
 
+async function unenroll(enrollmentId) {
+  await enrollmentStore.unenroll(enrollmentId);
+}
+
+
 // ── Calendar ──────────────────────────────────────────────────────────────────
 const today        = new Date();
 const currentMonth = ref(today.getMonth());
@@ -275,14 +310,8 @@ function nextMonth() {
   else currentMonth.value++;
 }
 
-// ── Tasks (static for now) ────────────────────────────────────────────────────
-const tasks = ref([
-  { id: 1, title: 'Cybersecurity Lab Report',        course: 'CYB 201', rawDate: '2026-04-03', urgency: 'high'   },
-  { id: 2, title: 'Data Analytics Assignment 3',     course: 'DAT 401', rawDate: '2026-04-07', urgency: 'medium' },
-  { id: 3, title: 'Business Ethics Essay',           course: 'BUS 302', rawDate: '2026-04-10', urgency: 'medium' },
-  { id: 4, title: 'Media Production Final Project',  course: 'FMS 204', rawDate: '2026-04-18', urgency: 'low'    },
-  { id: 5, title: 'Media Law Case Study',            course: 'MCM 302', rawDate: '2026-04-22', urgency: 'low'    },
-]);
+// ── Tasks (empty by default — will be wired to API in future) ───────────────
+const tasks = ref([]);
 
 const urgencyRing = {
   high:   'ring-red-400   bg-red-400',

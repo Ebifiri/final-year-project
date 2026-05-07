@@ -1,5 +1,4 @@
 <template>
-  <!-- Scrollable page content — layout shell is provided by NavBar in App.vue -->
   <main class="flex-1 bg-slate-50">
 
     <!-- HERO SECTION -->
@@ -37,19 +36,49 @@
           <h3 class="text-2xl font-bold text-slate-900">Available Courses</h3>
           <p class="text-slate-500 mt-1">Explore all programs and modules available to you.</p>
         </div>
-        <button class="hidden sm:flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 hover:border-blue-300 hover:bg-blue-50 text-blue-600 text-sm font-semibold rounded-lg shadow-sm transition-all">
+        <RouterLink
+          to="/courses"
+          class="hidden sm:flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 hover:border-blue-300 hover:bg-blue-50 text-blue-600 text-sm font-semibold rounded-lg shadow-sm transition-all"
+        >
           View all courses
           <ArrowRight class="w-4 h-4" />
-        </button>
+        </RouterLink>
       </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-        <CourseCard title="Introduction to Strategic Communication" faculty="SST" code="STR 101" color="bg-emerald-500" />
-        <CourseCard title="Digital Media Production" faculty="Film & Multimedia" code="FMS 204" color="bg-purple-500" />
-        <CourseCard title="Business Ethics & Law" faculty="SMSS" code="BUS 302" color="bg-blue-500" />
-        <CourseCard title="Advanced Data Analytics" faculty="ISMS" code="DAT 401" color="bg-amber-500" />
-        <CourseCard title="Cybersecurity Fundamentals" faculty="SST" code="CYB 201" color="bg-rose-500" />
-        <CourseCard title="Media Law & Ethics" faculty="MassComm" code="MCM 302" color="bg-teal-500" />
+      <!-- Loading skeleton -->
+      <div v-if="loading" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+        <div v-for="n in 6" :key="n" class="bg-white rounded-xl border border-slate-200 overflow-hidden animate-pulse">
+          <div class="h-28 bg-slate-200"></div>
+          <div class="p-5 space-y-3">
+            <div class="h-3 bg-slate-200 rounded w-1/3"></div>
+            <div class="h-4 bg-slate-200 rounded w-3/4"></div>
+          </div>
+        </div>
+      </div>
+
+      <div v-else class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+        <RouterLink
+          v-for="c in featuredCourses"
+          :key="c.code"
+          :to="'/courses/' + c.code"
+          class="group bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md hover:border-blue-200 transition-all flex flex-col h-full"
+        >
+          <div :class="['h-28 p-5 flex items-end relative overflow-hidden', c.color]">
+            <div class="absolute -top-10 -right-10 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
+            <div class="absolute -bottom-4 -left-4 w-20 h-20 bg-black/10 rounded-full blur-xl"></div>
+            <div class="bg-white/20 backdrop-blur-md px-3 py-1 rounded text-white text-xs font-bold tracking-wider relative z-10">
+              {{ c.code }}
+            </div>
+          </div>
+          <div class="p-5 flex flex-col flex-grow">
+            <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 block">{{ c.dept }}</span>
+            <h4 class="font-bold text-slate-900 leading-snug mb-4 group-hover:text-blue-600 transition-colors">{{ c.title }}</h4>
+            <div class="mt-auto pt-4 border-t border-slate-100 flex items-center text-sm font-medium text-blue-600">
+              <BookOpen class="w-4 h-4 mr-2" />
+              Go to course
+            </div>
+          </div>
+        </RouterLink>
       </div>
     </section>
 
@@ -57,39 +86,20 @@
 </template>
 
 <script setup>
-import { defineComponent, h } from 'vue';
+import { computed, onMounted } from 'vue';
+import { RouterLink } from 'vue-router';
 import { ArrowRight, BookOpen } from 'lucide-vue-next';
+import { useCourseStore } from '@/stores/courses.js';
+import { useAuthStore }   from '@/stores/auth.js';
 
-// ── CourseCard ──────────────────────────────────────────────────────────────
-const CourseCard = defineComponent({
-  name: 'CourseCard',
-  props: {
-    title: { type: String, required: true },
-    faculty: { type: String, required: true },
-    code: { type: String, required: true },
-    color: { type: String, required: true },
-  },
-  setup(props) {
-    return () =>
-      h('div', {
-        class: 'group bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md hover:border-blue-200 transition-all cursor-pointer flex flex-col h-full',
-      }, [
-        h('div', { class: `h-28 ${props.color} p-5 flex items-end relative overflow-hidden` }, [
-          h('div', { class: 'absolute -top-10 -right-10 w-32 h-32 bg-white/10 rounded-full blur-2xl' }),
-          h('div', { class: 'absolute -bottom-4 -left-4 w-20 h-20 bg-black/10 rounded-full blur-xl' }),
-          h('div', {
-            class: 'bg-white/20 backdrop-blur-md px-3 py-1 rounded text-white text-xs font-bold tracking-wider relative z-10',
-          }, props.code),
-        ]),
-        h('div', { class: 'p-5 flex flex-col flex-grow' }, [
-          h('span', { class: 'text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 block' }, props.faculty),
-          h('h4', { class: 'font-bold text-slate-900 leading-snug mb-4 group-hover:text-blue-600 transition-colors' }, props.title),
-          h('div', { class: 'mt-auto pt-4 border-t border-slate-100 flex items-center text-sm font-medium text-blue-600' }, [
-            h(BookOpen, { class: 'w-4 h-4 mr-2' }),
-            'Go to course',
-          ]),
-        ]),
-      ]);
-  },
+const courseStore     = useCourseStore();
+const auth            = useAuthStore();
+const loading         = computed(() => courseStore.loading);
+const featuredCourses = computed(() => courseStore.courses.slice(0, 6));
+
+onMounted(() => {
+  if (auth.isLoggedIn) {
+    courseStore.fetchCourses();
+  }
 });
 </script>

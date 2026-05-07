@@ -76,14 +76,30 @@
                 <span class="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-[#1e293b]">1</span>
               </button>
 
-              <!-- Login button -->
+              <!-- Login button (guest only) -->
               <RouterLink
+                v-if="!isLoggedIn"
                 to="/login"
                 class="hidden sm:flex items-center gap-1.5 px-4 py-1.5 bg-white text-[#1e293b] text-sm font-bold rounded-lg hover:bg-slate-100 transition-colors shadow-sm"
               >
                 <LogIn class="w-4 h-4" />
                 Log in
               </RouterLink>
+
+              <!-- User avatar (logged in) -->
+              <button
+                v-if="isLoggedIn"
+                class="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors"
+                @click="handleLogout"
+              >
+                <img
+                  :src="avatarUrl"
+                  class="w-6 h-6 rounded-full"
+                  alt="avatar"
+                />
+                <span class="text-sm font-medium text-white">{{ auth.user?.name?.split(' ')[0] }}</span>
+                <LogOut class="w-3.5 h-3.5 text-slate-400" />
+              </button>
             </div>
           </div>
         </div>
@@ -105,7 +121,7 @@
 </template>
 
 <script setup>
-import { ref, defineComponent, h } from 'vue';
+import { ref, computed, defineComponent, h } from 'vue';
 import { RouterLink, useRouter } from 'vue-router';
 import {
   Bell, Mail, ChevronDown, ChevronRight, Search, Menu, LogIn,
@@ -113,11 +129,27 @@ import {
   Calendar, BookMarked, MonitorPlay, Shield,
   X, Settings, LogOut,
 } from 'lucide-vue-next';
+import { useAuthStore }      from '@/stores/auth.js';
+import { useEnrollmentStore } from '@/stores/enrollments.js';
+
+// ── Auth ─────────────────────────────────────────────────────────────────────
+const auth            = useAuthStore();
+const enrollmentStore = useEnrollmentStore();
+const isLoggedIn      = computed(() => auth.isLoggedIn);
+const avatarUrl       = computed(() => {
+  const name = encodeURIComponent(auth.user?.name || 'User');
+  return `https://ui-avatars.com/api/?name=${name}&background=cbd5e1&color=1e293b&size=128`;
+});
+
+function handleLogout() {
+  auth.logout();
+  enrollmentStore.clear();
+  router.push('/');
+}
 
 // ── Reactive state ──────────────────────────────────────────────────────────
 const isSidebarOpen = ref(false);
 const isDesktopSidebarClosed = ref(true);
-const isLoggedIn = ref(false); // TODO: replace with real auth state
 
 // ── Navbar search ────────────────────────────────────────────────────────────
 const router    = useRouter();
@@ -256,38 +288,46 @@ const SidebarContents = defineComponent({
                 h('div', { class: 'relative' }, [
                   h('div', { class: 'w-24 h-24 rounded-full border-4 border-white shadow-md overflow-hidden mb-3 bg-slate-200' }, [
                     h('img', {
-                      src: 'https://ui-avatars.com/api/?name=Ayebaebifiri+Ikoli-Spiff&background=cbd5e1&color=1e293b&size=128',
-                      alt: 'Ayebaebifiri Ikoli-Spiff',
+                      src: avatarUrl.value,
+                      alt: auth.user?.name || 'User',
                       class: 'w-full h-full object-cover',
                     }),
                   ]),
                   h('div', { class: 'absolute bottom-4 right-0 w-4 h-4 bg-green-500 border-2 border-white rounded-full' }),
                 ]),
-                h('h3', { class: 'font-bold text-slate-900 text-lg leading-tight' }, 'Ayebaebifiri Ikoli-Spiff'),
-                h('p', { class: 'text-xs font-medium text-slate-500 mt-1' }, 'Student • Computer Science'),
+                h('h3', { class: 'font-bold text-slate-900 text-lg leading-tight' }, auth.user?.name || 'Student'),
+                h('p', { class: 'text-xs font-medium text-slate-500 mt-1' }, `${auth.user?.role ?? 'student'} • PAU`),
               ]),
 
               // Navigation
               h('div', { class: 'flex-1 overflow-y-auto py-4 px-3' }, [
                 h('div', { class: 'space-y-1 mb-8' }, [
-                  h(SidebarItemInner, { icon: HomeIcon, label: 'Site home', active: true }),
-                  h(SidebarItemInner, { icon: LayoutDashboard, label: 'Dashboard' }),
-                  h(SidebarItemInner, { icon: Calendar, label: 'Calendar' }),
+                  h(RouterLink, { to: '/',                onClick: props.onClose, class: 'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all' }, () => [h(HomeIcon, { class: 'w-5 h-5 text-slate-400' }), h('span', 'Site home')]),
+                  h(RouterLink, { to: '/dashboard/home', onClick: props.onClose, class: 'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all' }, () => [h(LayoutDashboard, { class: 'w-5 h-5 text-slate-400' }), h('span', 'Dashboard')]),
+                  h(RouterLink, { to: '/courses',        onClick: props.onClose, class: 'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all' }, () => [h(BookMarked, { class: 'w-5 h-5 text-slate-400' }), h('span', 'All courses')]),
                 ]),
+                // My enrolled courses
                 h('div', { class: 'px-3 mb-2' }, [
                   h('h4', { class: 'text-xs font-bold text-slate-400 uppercase tracking-wider' }, 'My Courses'),
                 ]),
                 h('div', { class: 'space-y-1' }, [
-                  h(SidebarItemInner, { icon: BookMarked, label: 'All courses' }),
-                  h(SidebarItemInner, { icon: MonitorPlay, label: 'PAU-CSC 310', isSubItem: true }),
-                  h(SidebarItemInner, { icon: Shield, label: 'CYB 201', isSubItem: true }),
+                  ...enrollmentStore.enrollments.slice(0, 5).map(e =>
+                    h(RouterLink, {
+                      key: e._id,
+                      to: `/courses/${e.course?.code}`,
+                      onClick: props.onClose,
+                      class: 'w-full flex items-center gap-3 pl-10 px-3 py-2.5 rounded-lg text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all',
+                    }, () => [h(MonitorPlay, { class: 'w-4 h-4 text-slate-400' }), h('span', { class: 'truncate' }, e.course?.code ?? '')])
+                  ),
                 ]),
               ]),
 
               // Footer
               h('div', { class: 'p-4 border-t border-slate-100 space-y-1' }, [
-                h(SidebarItemInner, { icon: Settings, label: 'Preferences' }),
-                h(SidebarItemInner, { icon: LogOut, label: 'Log out', extraClass: 'text-red-600 hover:bg-red-50 hover:text-red-700' }),
+                h('button', {
+                  class: 'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-sm font-medium text-red-600 hover:bg-red-50 hover:text-red-700',
+                  onClick: () => { handleLogout(); props.onClose?.(); },
+                }, [h(LogOut, { class: 'w-5 h-5' }), h('span', 'Log out')]),
               ]),
             ])
 
