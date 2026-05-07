@@ -46,13 +46,22 @@
             />
           </div>
 
+          <!-- Error message -->
+          <p v-if="auth.error" class="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+            {{ auth.error }}
+          </p>
+
           <!-- Login button -->
           <button
-            class="flex items-center justify-center gap-2 w-full py-3 bg-[#1e293b] hover:bg-slate-700 text-white font-bold rounded-xl transition-colors shadow-lg mt-1"
+            class="flex items-center justify-center gap-2 w-full py-3 bg-[#1e293b] hover:bg-slate-700 text-white font-bold rounded-xl transition-colors shadow-lg mt-1 disabled:opacity-60 disabled:cursor-not-allowed"
+            :disabled="auth.loading"
             @click="handleLogin"
           >
-            Log in
-            <ArrowRight class="w-4 h-4" />
+            <Loader2 v-if="auth.loading" class="w-4 h-4 animate-spin" />
+            <template v-else>
+              Log in
+              <ArrowRight class="w-4 h-4" />
+            </template>
           </button>
         </div>
 
@@ -106,14 +115,16 @@
 <script setup>
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { ArrowRight } from 'lucide-vue-next';
+import { ArrowRight, Loader2 } from 'lucide-vue-next';
+import { useAuthStore } from '@/stores/auth.js';
 
-const router = useRouter();
-const email = ref('');
+const router   = useRouter();
+const auth     = useAuthStore();
+const email    = ref('');
 const password = ref('');
 
-function handleLogin() {
-  // TODO: wire up real auth
-  router.push('/');
+async function handleLogin() {
+  const ok = await auth.login(email.value, password.value);
+  if (ok) router.push('/dashboard/home');
 }
 </script>

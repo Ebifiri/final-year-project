@@ -86,20 +86,27 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useRoute, RouterLink } from 'vue-router';
 import {
   ChevronDown, BookOpen, Calendar, FileText,
   Link2, ClipboardList, Megaphone, AlertCircle,
   FlaskConical, Video,
 } from 'lucide-vue-next';
-import { allCourses } from '@/data/courses.js';
+import { api } from '@/api/client.js';
 
 const route  = useRoute();
-const code   = decodeURIComponent(route.params.code ?? '');
+const code   = decodeURIComponent(route.params.code ?? '').toUpperCase();
+const course = ref(null);
 
-// Look up the real course from the shared catalogue
-const course = allCourses.find(c => c.code === code) ?? null;
+onMounted(async () => {
+  try {
+    const data = await api.get(`/api/courses/${encodeURIComponent(code)}`);
+    course.value = data.course;
+  } catch {
+    course.value = null;
+  }
+});
 
 // ── Sections ─────────────────────────────────────────────────────────────────
 const allExpanded     = ref(true);

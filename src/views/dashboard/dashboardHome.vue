@@ -4,7 +4,7 @@
     <!-- Page heading -->
     <div class="mb-6">
       <h1 class="text-2xl font-bold text-slate-900">Dashboard</h1>
-      <p class="text-sm text-slate-500 mt-1">Welcome back, Ayebaebifiri 👋</p>
+      <p class="text-sm text-slate-500 mt-1">Welcome back, {{ auth.user?.name?.split(' ')[0] ?? 'Student' }} 👋</p>
     </div>
 
     <!-- Two-column grid -->
@@ -195,48 +195,61 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import {
   Clock, BookOpen, ChevronLeft, ChevronRight,
   ListTodo, MonitorPlay, CalendarDays,
 } from 'lucide-vue-next';
+import { useEnrollmentStore } from '@/stores/enrollments.js';
+import { useAuthStore }       from '@/stores/auth.js';
 
-// ── Recently Accessed ────────────────────────────────────────────────────────
-const recentCourses = [
-  { code: 'CYB 201', title: 'Cybersecurity Fundamentals',            color: 'bg-rose-500',    accessed: '2 hours ago' },
-  { code: 'DAT 401', title: 'Advanced Data Analytics',               color: 'bg-amber-500',   accessed: 'Yesterday'   },
-  { code: 'BUS 302', title: 'Business Ethics & Law',                 color: 'bg-blue-500',    accessed: '3 days ago'  },
-  { code: 'FMS 204', title: 'Digital Media Production',              color: 'bg-purple-500',  accessed: '5 days ago'  },
-];
+const auth            = useAuthStore();
+const enrollmentStore = useEnrollmentStore();
 
-// ── Enrolled Courses ─────────────────────────────────────────────────────────
-const enrolledCourses = [
-  { code: 'CYB 201', title: 'Cybersecurity Fundamentals',               faculty: 'SST',              progress: 68, color: 'bg-rose-500'    },
-  { code: 'DAT 401', title: 'Advanced Data Analytics',                  faculty: 'ISMS',             progress: 45, color: 'bg-amber-500'   },
-  { code: 'BUS 302', title: 'Business Ethics & Law',                    faculty: 'SMSS',             progress: 80, color: 'bg-blue-500'    },
-  { code: 'FMS 204', title: 'Digital Media Production',                 faculty: 'Film & Multimedia',progress: 30, color: 'bg-purple-500'  },
-  { code: 'MCM 302', title: 'Media Law & Ethics',                       faculty: 'MassComm',         progress: 55, color: 'bg-teal-500'    },
-  { code: 'STR 101', title: 'Introduction to Strategic Communication',  faculty: 'SST',              progress: 90, color: 'bg-emerald-500' },
-];
-
-const PAGE_SIZE  = 12; // 4 cols × 3 rows
-const coursePage = ref(1);
-const totalPages = computed(() => Math.ceil(enrolledCourses.length / PAGE_SIZE));
-const paginatedCourses = computed(() => {
-  const start = (coursePage.value - 1) * PAGE_SIZE;
-  return enrolledCourses.slice(start, start + PAGE_SIZE);
+onMounted(() => {
+  enrollmentStore.fetchEnrollments();
 });
 
-// ── Calendar ─────────────────────────────────────────────────────────────────
+// ── Recently Accessed ─────────────────────────────────────────────────────────
+const recentCourses = computed(() =>
+  enrollmentStore.recentEnrollments.map(e => ({
+    code:     e.course?.code     ?? '',
+    title:    e.course?.title    ?? '',
+    color:    e.course?.color    ?? 'bg-slate-500',
+    accessed: formatRelative(e.lastAccessed),
+  }))
+);
+
+// ── Enrolled Courses ──────────────────────────────────────────────────────────
+const enrolledCourses = computed(() =>
+  enrollmentStore.enrollments.map(e => ({
+    _id:      e._id,
+    code:     e.course?.code     ?? '',
+    title:    e.course?.title    ?? '',
+    faculty:  e.course?.dept     ?? '',
+    progress: e.progress         ?? 0,
+    color:    e.course?.color    ?? 'bg-slate-500',
+  }))
+);
+
+const PAGE_SIZE  = 12;
+const coursePage = ref(1);
+const totalPages = computed(() => Math.ceil(enrolledCourses.value.length / PAGE_SIZE) || 1);
+const paginatedCourses = computed(() => {
+  const start = (coursePage.value - 1) * PAGE_SIZE;
+  return enrolledCourses.value.slice(start, start + PAGE_SIZE);
+});
+
+// ── Calendar ──────────────────────────────────────────────────────────────────
 const today        = new Date();
 const currentMonth = ref(today.getMonth());
 const currentYear  = ref(today.getFullYear());
 
-const MONTHS   = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-const monthName    = computed(() => MONTHS[currentMonth.value]);
-const year         = computed(() => currentYear.value);
-const daysInMonth  = computed(() => new Date(currentYear.value, currentMonth.value + 1, 0).getDate());
-const startDay     = computed(() => new Date(currentYear.value, currentMonth.value, 1).getDay());
+const MONTHS    = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const monthName = computed(() => MONTHS[currentMonth.value]);
+const year      = computed(() => currentYear.value);
+const daysInMonth = computed(() => new Date(currentYear.value, currentMonth.value + 1, 0).getDate());
+const startDay    = computed(() => new Date(currentYear.value, currentMonth.value, 1).getDay());
 
 const dueDays = computed(() =>
   tasks.value
@@ -262,7 +275,7 @@ function nextMonth() {
   else currentMonth.value++;
 }
 
-// ── Tasks ────────────────────────────────────────────────────────────────────
+// ── Tasks (static for now) ────────────────────────────────────────────────────
 const tasks = ref([
   { id: 1, title: 'Cybersecurity Lab Report',        course: 'CYB 201', rawDate: '2026-04-03', urgency: 'high'   },
   { id: 2, title: 'Data Analytics Assignment 3',     course: 'DAT 401', rawDate: '2026-04-07', urgency: 'medium' },
@@ -284,5 +297,17 @@ const urgencyBadge = {
 
 function formatDate(raw) {
   return new Date(raw).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function formatRelative(dateStr) {
+  if (!dateStr) return 'Recently';
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins  = Math.floor(diff / 60000);
+  const hours = Math.floor(diff / 3600000);
+  const days  = Math.floor(diff / 86400000);
+  if (mins < 60)  return `${mins}m ago`;
+  if (hours < 24) return `${hours}h ago`;
+  if (days === 1) return 'Yesterday';
+  return `${days} days ago`;
 }
 </script>

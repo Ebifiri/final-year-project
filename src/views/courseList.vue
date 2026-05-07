@@ -146,62 +146,62 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import {
   Search, X, BookOpen, ChevronLeft, ChevronRight,
   CheckCircle2, SearchX,
 } from 'lucide-vue-next';
-import { allCourses } from '@/data/courses.js';
+import { useCourseStore }      from '@/stores/courses.js';
+import { useEnrollmentStore }  from '@/stores/enrollments.js';
 
 const route   = useRoute();
 const router  = useRouter();
 
+const courseStore     = useCourseStore();
+const enrollmentStore = useEnrollmentStore();
+
 // ── Reactive filter state (driven by URL query params) ───────────────────────
-// searchQuery is two-way: typing updates it locally, but also syncs from ?q= in URL
 const searchQuery = ref(route.query.q || '');
 const page        = ref(1);
-
-// Keep searchQuery in sync when the URL ?q changes (e.g. navigating from navbar)
-watch(() => route.query.q, (val) => { searchQuery.value = val || ''; });
 
 const activeDept = computed(() => route.query.dept || '');
 const activeYear = computed(() => route.query.year || '');
 
-// Reset page when filters change
-watch([activeDept, activeYear, searchQuery], () => { page.value = 1; });
+// Fetch from API whenever filters change
+watch([activeDept, activeYear, searchQuery], () => {
+  page.value = 1;
+  courseStore.fetchCourses({ search: searchQuery.value, dept: activeDept.value, year: activeYear.value });
+}, { immediate: false });
+
+// Keep searchQuery in sync with URL ?q=
+watch(() => route.query.q, (val) => { searchQuery.value = val || ''; });
+
+onMounted(() => {
+  courseStore.fetchCourses({ search: searchQuery.value, dept: activeDept.value, year: activeYear.value });
+  enrollmentStore.fetchEnrollments();
+});
 
 function clearDept() { router.push({ query: { ...route.query, dept: undefined } }); }
 function clearYear() { router.push({ query: { ...route.query, year: undefined } }); }
 function clearAll()  { searchQuery.value = ''; router.push({ query: {} }); }
 
-// ── Enrolled courses (TODO: replace with Pinia store / API) ─────────────────
-const enrolledCodes = ref(['CYB 201', 'DAT 401', 'BUS 302', 'FMS 204', 'MCM 302', 'STR 101']);
-function isEnrolled(code) { return enrolledCodes.value.includes(code); }
-function enroll(code) { if (!enrolledCodes.value.includes(code)) enrolledCodes.value.push(code); }
+// ── Enroll / unenroll ────────────────────────────────────────────────────────
+function isEnrolled(code) { return enrollmentStore.isEnrolled(code); }
 
+async function enroll(code) {
+  await enrollmentStore.enroll(code);
+}
 
-// ── Filtering ────────────────────────────────────────────────────────────────
-const filteredCourses = computed(() => {
-  const dept  = activeDept.value.toLowerCase();
-  const year  = activeYear.value.toLowerCase();
-  const q     = searchQuery.value.toLowerCase();
-
-  return allCourses.filter(c => {
-    const matchDept = !dept || c.dept.toLowerCase().includes(dept);
-    const matchYear = !year || c.year.toLowerCase() === year;
-    const matchQ    = !q    || c.title.toLowerCase().includes(q)
-                             || c.code.toLowerCase().includes(q)
-                             || c.dept.toLowerCase().includes(q);
-    return matchDept && matchYear && matchQ;
-  });
-});
-
-// ── Pagination ───────────────────────────────────────────────────────────────
+// ── Pagination (client-side over API results) ────────────────────────────────
+const courses        = computed(() => courseStore.courses);
 const PAGE_SIZE      = 12;
-const totalPages     = computed(() => Math.max(1, Math.ceil(filteredCourses.value.length / PAGE_SIZE)));
+const totalPages     = computed(() => Math.max(1, Math.ceil(courses.value.length / PAGE_SIZE)));
 const paginatedCourses = computed(() => {
   const start = (page.value - 1) * PAGE_SIZE;
-  return filteredCourses.value.slice(start, start + PAGE_SIZE);
+  return courses.value.slice(start, start + PAGE_SIZE);
 });
+
+// alias for the template "X courses available" count
+const filteredCourses = courses;
 </script>
