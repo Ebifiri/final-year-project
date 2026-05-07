@@ -148,4 +148,41 @@ router.delete('/resources/:resourceId', protect, async (req, res) => {
   }
 });
 
+// ── GET /api/content/download/:resourceId  — proxy file download ──────────────
+// Fetches the file from Cloudinary and streams it to the browser with a proper
+// Content-Disposition: attachment header, avoiding the fl_attachment
+// transformation which corrupts binary files (pptx, docx, xlsx, etc.)
+router.get('/download/:resourceId', protect, async (req, res) => {
+  try {
+    const resource = await Resource.findById(req.params.resourceId);
+    if (!resource || !resource.fileUrl) {
+      return res.status(404).json({ message: 'Resource not found or has no file' });
+    }
+
+    // Fetch the raw file from its storage URL (Cloudinary or local)
+    const upstream = await fetch(resource.fileUrl);
+    if (!upstream.ok) {
+      return res.status(502).json({ message: 'Failed to fetch file from storage' });
+    }
+
+    // Derive a clean filename
+    const urlFilename = resource.fileUrl.split('?')[0].split('/').pop() ?? '';
+    const filename    = urlFilename || `${resource.title}`;
+
+    // Set download headers
+    res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`);
+    res.setHeader('Content-Type', resource.mimeType || upstream.headers.get('content-type') || 'application/octet-stream');
+    const contentLength = upstream.headers.get('content-length');
+    if (contentLength) res.setHeader('Content-Length', contentLength);
+
+    // Stream the file body — no modification to the binary
+    const { Readable } = await import('stream');
+    Readable.fromWeb(upstream.body).pipe(res);
+
+  } catch (err) {
+    console.error('Download proxy error:', err);
+    res.status(500).json({ message: err.message });
+  }
+});
+
 export default router;

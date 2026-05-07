@@ -205,8 +205,7 @@
                     <!-- Download button (shown on hover, not for assignments/quizzes/announcements) -->
                     <a
                       v-if="isDownloadable(res)"
-                      :href="makeDownloadUrl(res.fileUrl)"
-                      :download="getFilename(res)"
+                      :href="downloadUrl(res)"
                       target="_blank"
                       rel="noopener noreferrer"
                       class="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-blue-100 text-slate-300 hover:text-blue-600 transition-all"
@@ -577,18 +576,10 @@ function isDownloadable(res) {
   return !!res.fileUrl && !NON_DOWNLOADABLE.has(res.type);
 }
 
-// Cloudinary raw resources need fl_attachment to force a browser download
-function makeDownloadUrl(url) {
-  if (!url) return url;
-  if (url.includes('res.cloudinary.com')) {
-    return url.replace('/upload/', '/upload/fl_attachment/');
-  }
-  return url;
-}
-
-function getFilename(res) {
-  if (!res.fileUrl) return res.title;
-  return res.fileUrl.split('?')[0].split('/').pop() || res.title;
+// Use a backend proxy endpoint so the file is streamed with correct
+// Content-Disposition headers — avoids Cloudinary fl_attachment corruption
+function downloadUrl(res) {
+  return `${import.meta.env.VITE_API_BASE_URL || ''}/api/content/download/${res._id}`;
 }
 
 // ── Date formatter ────────────────────────────────────────────────────────────
