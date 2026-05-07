@@ -5,8 +5,8 @@ import protect from '../middleware/auth.js';
 const router = express.Router();
 
 // ── GET /api/courses ──────────────────────────────────────────────────────────
-// Supports ?search=, ?dept=, ?year= query params
-router.get('/', protect, async (req, res) => {
+// Public — no auth required to browse courses
+router.get('/', async (req, res) => {
   try {
     const { search, dept, year } = req.query;
     const filter = {};
@@ -33,7 +33,8 @@ router.get('/', protect, async (req, res) => {
 });
 
 // ── GET /api/courses/:code ────────────────────────────────────────────────────
-router.get('/:code', protect, async (req, res) => {
+// Public — no auth required to view a single course
+router.get('/:code', async (req, res) => {
   try {
     const course = await Course.findOne({ code: req.params.code.toUpperCase() });
     if (!course) {

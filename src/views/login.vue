@@ -114,17 +114,22 @@
 
 <script setup>
 import { ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import { ArrowRight, Loader2 } from 'lucide-vue-next';
 import { useAuthStore } from '@/stores/auth.js';
 
 const router   = useRouter();
+const route    = useRoute();
 const auth     = useAuthStore();
 const email    = ref('');
 const password = ref('');
 
 async function handleLogin() {
   const ok = await auth.login(email.value, password.value);
-  if (ok) router.push('/dashboard/home');
+  if (ok) {
+    // Redirect back to the page the user came from (e.g. a course they tried to access)
+    const destination = route.query.redirect || '/dashboard/home';
+    router.push(destination);
+  }
 }
 </script>

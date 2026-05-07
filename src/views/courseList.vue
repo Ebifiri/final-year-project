@@ -159,12 +159,14 @@ import {
 } from 'lucide-vue-next';
 import { useCourseStore }      from '@/stores/courses.js';
 import { useEnrollmentStore }  from '@/stores/enrollments.js';
+import { useAuthStore }        from '@/stores/auth.js';
 
 const route   = useRoute();
 const router  = useRouter();
 
 const courseStore     = useCourseStore();
 const enrollmentStore = useEnrollmentStore();
+const auth            = useAuthStore();
 
 // ── Reactive filter state (driven by URL query params) ───────────────────────
 const searchQuery = ref(route.query.q || '');
@@ -184,17 +186,23 @@ watch(() => route.query.q, (val) => { searchQuery.value = val || ''; });
 
 onMounted(() => {
   courseStore.fetchCourses({ search: searchQuery.value, dept: activeDept.value, year: activeYear.value });
-  enrollmentStore.fetchEnrollments();
+  // Only fetch enrollments if the user is logged in
+  if (auth.isLoggedIn) enrollmentStore.fetchEnrollments();
 });
 
 function clearDept() { router.push({ query: { ...route.query, dept: undefined } }); }
 function clearYear() { router.push({ query: { ...route.query, year: undefined } }); }
 function clearAll()  { searchQuery.value = ''; router.push({ query: {} }); }
 
-// ── Enroll / unenroll ────────────────────────────────────────────────────────
+// ── Enroll / unenroll ─────────────────────────────────────────────────────────────────────
 function isEnrolled(code) { return enrollmentStore.isEnrolled(code); }
 
 async function enroll(code) {
+  if (!auth.isLoggedIn) {
+    // Save destination and redirect to login
+    router.push({ name: 'login', query: { redirect: `/courses/${encodeURIComponent(code)}` } });
+    return;
+  }
   await enrollmentStore.enroll(code);
 }
 

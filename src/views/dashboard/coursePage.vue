@@ -37,14 +37,33 @@
     <!-- Page body -->
     <div v-if="course" class="max-w-6xl mx-auto px-6 lg:px-10 py-8 flex flex-col gap-10">
 
+      <!-- ── NOT LOGGED IN GATE ──────────────────────────────────── -->
+      <div v-if="!auth.isLoggedIn" class="flex flex-col items-center justify-center py-16 text-center bg-white rounded-2xl border border-slate-200 shadow-sm">
+        <div class="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
+          <LogIn class="w-7 h-7 text-slate-400" />
+        </div>
+        <h2 class="text-lg font-bold text-slate-900">Log in to access this course</h2>
+        <p class="text-sm text-slate-500 mt-2 max-w-sm">
+          You need to be logged in to view or enroll in
+          <span class="font-semibold">{{ course.code }}: {{ course.title }}</span>.
+        </p>
+        <RouterLink
+          :to="{ name: 'login', query: { redirect: '/courses/' + course.code } }"
+          class="mt-6 flex items-center gap-2 px-6 py-3 bg-[#1e293b] hover:bg-slate-700 text-white font-bold rounded-xl transition-colors shadow-md"
+        >
+          <LogIn class="w-4 h-4" />
+          Log in to continue
+        </RouterLink>
+      </div>
+
       <!-- ── NOT ENROLLED GATE ─────────────────────────────────────── -->
-      <div v-if="!enrolled" class="flex flex-col items-center justify-center py-16 text-center bg-white rounded-2xl border border-slate-200 shadow-sm">
+      <div v-else-if="!enrolled" class="flex flex-col items-center justify-center py-16 text-center bg-white rounded-2xl border border-slate-200 shadow-sm">
         <div :class="['w-16 h-16 rounded-2xl flex items-center justify-center mb-4', course.color]">
           <BookLock class="w-7 h-7 text-white" />
         </div>
         <h2 class="text-lg font-bold text-slate-900">You are not enrolled in this course</h2>
         <p class="text-sm text-slate-500 mt-2 max-w-sm">
-          Enrol to access lecture slides, lab resources, assignments and more for
+          Enroll to access lecture slides, lab resources, assignments and more for
           <span class="font-semibold">{{ course.code }}: {{ course.title }}</span>.
         </p>
         <button
@@ -125,13 +144,15 @@ import { useRoute, RouterLink } from 'vue-router';
 import {
   ChevronDown, BookOpen, Calendar, FileText,
   Link2, ClipboardList, Megaphone, AlertCircle,
-  FlaskConical, Video, BookLock, UserMinus, Loader2,
+  FlaskConical, Video, BookLock, UserMinus, Loader2, LogIn,
 } from 'lucide-vue-next';
 import { api }                   from '@/api/client.js';
 import { useEnrollmentStore }    from '@/stores/enrollments.js';
+import { useAuthStore }          from '@/stores/auth.js';
 
 const route           = useRoute();
 const enrollmentStore = useEnrollmentStore();
+const auth            = useAuthStore();
 
 const code     = decodeURIComponent(route.params.code ?? '').toUpperCase();
 const course   = ref(null);

@@ -28,13 +28,13 @@ const router = createRouter({
       path: '/courses',
       name: 'courses',
       component: courseList,
-      meta: { requiresAuth: true },
+      // public — no auth required to browse
     },
     {
       path: '/courses/:code',
       name: 'course',
       component: coursePage,
-      meta: { requiresAuth: true },
+      // public — login prompt shown inside the component if needed
     },
   ],
 })
