@@ -12,7 +12,6 @@
           <h1 class="text-2xl lg:text-3xl font-extrabold text-white leading-snug">
             {{ course.code }}: {{ course.title }}
           </h1>
-          <p class="text-sm text-white/60 mt-2">{{ course.credits }} credit{{ course.credits !== 1 ? 's' : '' }}</p>
         </div>
 
         <!-- Unenroll button (only when enrolled) -->

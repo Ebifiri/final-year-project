@@ -7,6 +7,7 @@ dotenv.config({ path: join(__dirname, '.env') });
 
 import express from 'express';
 import cors from 'cors';
+import passport from 'passport';
 import connectDB from './config/db.js';
 
 // Route handlers
@@ -30,6 +31,7 @@ app.use(cors({
   credentials: true,
 }));
 app.use(express.json());
+app.use(passport.initialize()); // stateless — no sessions
 
 // ── Routes ────────────────────────────────────────────────────────────────────
 app.use('/api/auth',        authRoutes);

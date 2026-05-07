@@ -17,9 +17,10 @@ const userSchema = new mongoose.Schema(
     },
     password: {
       type: String,
-      required: [true, 'Password is required'],
+      // Optional for OAuth users who don't set a password
+      required: function () { return !this.oauthProvider; },
       minlength: [6, 'Password must be at least 6 characters'],
-      select: false, // never return password in queries by default
+      select: false,
     },
     role: {
       type: String,
@@ -30,19 +31,27 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    // OAuth fields
+    oauthProvider: {
+      type: String,
+      enum: ['google', 'microsoft'],
+    },
+    oauthId: {
+      type: String,
+    },
   },
   { timestamps: true }
 );
 
-// Hash password before saving
+// Hash password before saving (skip for OAuth users)
 userSchema.pre('save', async function () {
-  if (!this.isModified('password')) return;
+  if (!this.password || !this.isModified('password')) return;
   this.password = await bcrypt.hash(this.password, 12);
 });
 
-
 // Compare plain password to hashed
 userSchema.methods.comparePassword = async function (candidate) {
+  if (!this.password) return false;
   return bcrypt.compare(candidate, this.password);
 };
 

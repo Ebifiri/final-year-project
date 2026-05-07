@@ -1,9 +1,11 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import home from '@/views/homeView.vue'
-import login from '@/views/login.vue'
+import home          from '@/views/homeView.vue'
+import login         from '@/views/login.vue'
+import register      from '@/views/register.vue'
+import OAuthCallback from '@/views/OAuthCallback.vue'
 import dashboardHome from '@/views/dashboard/dashboardHome.vue'
-import courseList from '@/views/courseList.vue'
-import coursePage from '@/views/dashboard/coursePage.vue'
+import courseList    from '@/views/courseList.vue'
+import coursePage    from '@/views/dashboard/coursePage.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -17,6 +19,16 @@ const router = createRouter({
       path: '/login',
       name: 'login',
       component: login,
+    },
+    {
+      path: '/register',
+      name: 'register',
+      component: register,
+    },
+    {
+      path: '/auth/callback',
+      name: 'oauth-callback',
+      component: OAuthCallback,
     },
     {
       path: '/dashboard/home',
