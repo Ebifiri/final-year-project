@@ -7,7 +7,7 @@ const resourceSchema = new mongoose.Schema(
     title:        { type: String, required: true, trim: true },
     type: {
       type: String,
-      enum: ['slides', 'lab', 'video', 'reading', 'assignment', 'quiz', 'announcement', 'link', 'document'],
+      enum: ['slides', 'lab', 'video', 'reading', 'assignment', 'quiz', 'announcement', 'link', 'document', 'other'],
       required: true,
     },
     fileUrl:      String,

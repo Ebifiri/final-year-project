@@ -299,6 +299,7 @@
                 <option value="assignment">Assignment</option>
                 <option value="quiz">Quiz</option>
                 <option value="announcement">Announcement</option>
+                <option value="other">Other (code, data, etc.)</option>
               </select>
             </div>
             <div v-if="newResource.type === 'link'">
@@ -313,11 +314,10 @@
               <label class="text-xs font-semibold text-slate-600 mb-1 block">File (optional)</label>
               <input
                 type="file"
-                accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.csv,.zip,.rar,.png,.jpg,.jpeg,.gif,.webp,.mp4,.mov,.avi,.webm,.mp3,.wav"
                 class="w-full text-xs text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                 @change="onFileChange($event)"
               />
-              <p class="text-[10px] text-slate-400 mt-1">PDF, Word, PowerPoint, Excel, images, video &bull; max 50 MB</p>
+              <p class="text-[10px] text-slate-400 mt-1">Any file type accepted &bull; max 50 MB</p>
               <p v-if="resourceUploadError" class="text-[11px] text-red-500 mt-1">{{ resourceUploadError }}</p>
             </div>
           </div>
@@ -383,7 +383,7 @@ import {
   ChevronDown, BookOpen, Calendar, FileText,
   Link2, ClipboardList, Megaphone, AlertCircle,
   FlaskConical, Video, BookLock, UserMinus, Loader2, LogIn,
-  Plus, PlusCircle, FolderOpen, ExternalLink, Trash2,
+  Plus, PlusCircle, FolderOpen, ExternalLink, Trash2, Package,
 } from 'lucide-vue-next';
 import { api }                   from '@/api/client.js';
 import { useEnrollmentStore }    from '@/stores/enrollments.js';
@@ -489,6 +489,7 @@ const RESOURCE_META = {
   announcement: { bg: 'bg-blue-50',   color: 'text-blue-500',   icon: Megaphone },
   link:         { bg: 'bg-teal-50',   color: 'text-teal-500',   icon: Link2 },
   document:     { bg: 'bg-slate-100', color: 'text-slate-500',  icon: FileText },
+  other:        { bg: 'bg-slate-100', color: 'text-slate-500',  icon: Package },
 };
 
 function resourceIcon(type)      { return (RESOURCE_META[type] ?? RESOURCE_META.document).icon; }
