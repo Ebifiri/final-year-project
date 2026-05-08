@@ -2,26 +2,70 @@
 import NavBar    from './components/navBar.vue';
 import AppFooter from './components/footer.vue';
 import { computed, ref, onMounted, onUnmounted } from 'vue';
-import { Download, X, Trash2, Loader2, CheckSquare } from 'lucide-vue-next';
+import { useRouter } from 'vue-router';
+import { Download, X, Trash2, Loader2, CheckSquare, Clock } from 'lucide-vue-next';
 import { useDownloadCart } from '@/stores/downloadCart.js';
 import { useAuthStore }    from '@/stores/auth.js';
 
-const cart = useDownloadCart();
-const auth = useAuthStore();
+const cart   = useDownloadCart();
+const auth   = useAuthStore();
+const router = useRouter();
 
-// ── Auth re-hydration ───────────────────────────────────────────────────────
-// Run fetchMe() on every page load so the correct user is always in the store,
-// even on public routes (the router guard only runs for requiresAuth routes).
-// Also re-check after browser back/forward cache (bfcache) restores.
+// ── Session-timeout toast ────────────────────────────────────────────────────
+const sessionExpiredToast = ref(false);
+
+function showExpiredToast() {
+  sessionExpiredToast.value = true;
+  setTimeout(() => { sessionExpiredToast.value = false; }, 5000);
+}
+
+function handleExpiry() {
+  if (auth.isLoggedIn && auth.isSessionExpired()) {
+    auth.logout();
+    showExpiredToast();
+    router.push('/login');
+  }
+}
+
+// ── Auth re-hydration + inactivity tracking ──────────────────────────────────
+let activityTimer  = null;
+let expiryInterval = null;
+
+const ACTIVITY_EVENTS = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'];
+
+function onUserActivity() {
+  auth.recordActivity();
+}
+
 onMounted(() => {
   auth.fetchMe();
 
+  // Restore from bfcache (back button)
   function onPageShow(e) {
-    // e.persisted === true means the page was restored from bfcache (back button)
-    if (e.persisted) auth.fetchMe();
+    if (e.persisted) {
+      if (auth.isSessionExpired()) {
+        auth.logout();
+        showExpiredToast();
+        router.push('/login');
+      } else {
+        auth.fetchMe();
+      }
+    }
   }
   window.addEventListener('pageshow', onPageShow);
-  onUnmounted(() => window.removeEventListener('pageshow', onPageShow));
+
+  // Track user activity to reset idle timer
+  ACTIVITY_EVENTS.forEach(ev => window.addEventListener(ev, onUserActivity, { passive: true }));
+
+  // Periodic check every 60 s — catches expiry even if the user is just reading
+  expiryInterval = setInterval(handleExpiry, 60_000);
+
+  onUnmounted(() => {
+    window.removeEventListener('pageshow', onPageShow);
+    ACTIVITY_EVENTS.forEach(ev => window.removeEventListener(ev, onUserActivity));
+    clearInterval(expiryInterval);
+    clearTimeout(activityTimer);
+  });
 });
 
 const downloading  = ref(false);
@@ -42,8 +86,6 @@ const groupLabel = computed(() => {
 });
 
 // Batch download: POST all resource IDs to the server, get back a single ZIP.
-// This completely avoids browser multi-download restrictions (popup blockers,
-// Chrome cross-origin iframe download policy, etc.)
 async function downloadAll() {
   if (downloading.value || !cart.items.length) return;
   downloading.value  = true;
@@ -86,6 +128,26 @@ async function downloadAll() {
     <router-view />
     <AppFooter />
   </NavBar>
+
+  <!-- ── Session Expired Toast ──────────────────────────────────────────────── -->
+  <Teleport to="body">
+    <Transition
+      enter-active-class="transition-all duration-300 ease-out"
+      enter-from-class="-translate-y-4 opacity-0"
+      enter-to-class="translate-y-0 opacity-100"
+      leave-active-class="transition-all duration-200 ease-in"
+      leave-from-class="translate-y-0 opacity-100"
+      leave-to-class="-translate-y-4 opacity-0"
+    >
+      <div
+        v-if="sessionExpiredToast"
+        class="fixed top-5 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-3 px-5 py-3 bg-amber-50 border border-amber-200 rounded-2xl shadow-lg"
+      >
+        <Clock class="w-4 h-4 text-amber-500 flex-shrink-0" />
+        <p class="text-sm font-semibold text-amber-800">Your session has expired. Please log in again.</p>
+      </div>
+    </Transition>
+  </Teleport>
 
   <!-- ── Floating Download Cart ───────────────────────────────────────────── -->
   <Teleport to="body">
@@ -140,3 +202,4 @@ async function downloadAll() {
 </template>
 
 <style scoped></style>
+
