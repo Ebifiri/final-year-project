@@ -61,9 +61,15 @@ router.post('/analyze', protect, async (req, res) => {
     // Load the file bytes — handle both Cloudinary URLs and local disk paths
     let fileBuffer;
     if (resource.fileUrl.startsWith('http')) {
+      console.log(`[AI] Fetching: ${resource.fileUrl}`);
       const upstream = await fetch(resource.fileUrl);
       if (!upstream.ok) {
-        return res.status(502).json({ message: 'Could not fetch file for processing' });
+        const statusText = `HTTP ${upstream.status} ${upstream.statusText}`;
+        console.error(`[AI] Cloudinary fetch failed: ${statusText} — ${resource.fileUrl}`);
+        return res.status(502).json({
+          message: `Could not fetch file from storage (${statusText}). ` +
+            'If this is a Cloudinary URL, check that CLOUDINARY_URL is correctly set on Render and re-upload the file.',
+        });
       }
       fileBuffer = Buffer.from(await upstream.arrayBuffer());
     } else {

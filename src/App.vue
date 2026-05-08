@@ -41,34 +41,43 @@ const groupLabel = computed(() => {
     : `${cart.count} file${cart.count !== 1 ? 's' : ''}`;
 });
 
-// For batch downloads we use hidden iframes instead of anchor clicks.
-// Browsers block multiple a.click() calls from a single user gesture, but
-// navigating a hidden iframe to a URL with Content-Disposition: attachment
-// triggers a download without needing a fresh gesture each time.
-function downloadViaIframe(resource) {
-  const url    = `${BASE_URL}/api/content/download/${resource._id}`;
-  const iframe = document.createElement('iframe');
-  // Position off-screen so it's invisible
-  iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;border:none;';
-  iframe.src = url;
-  document.body.appendChild(iframe);
-  // Clean up after 60 s (well after any large file would have started)
-  setTimeout(() => { if (iframe.parentNode) iframe.parentNode.removeChild(iframe); }, 60_000);
-}
-
+// Batch download: POST all resource IDs to the server, get back a single ZIP.
+// This completely avoids browser multi-download restrictions (popup blockers,
+// Chrome cross-origin iframe download policy, etc.)
 async function downloadAll() {
-  if (downloading.value) return;
+  if (downloading.value || !cart.items.length) return;
   downloading.value  = true;
   downloadDone.value = false;
-  for (const resource of cart.items) {
-    downloadViaIframe(resource);
-    // Small stagger so the server isn't hit simultaneously and so the
-    // browser has time to register each download before the next
-    await new Promise(r => setTimeout(r, 1200));
+
+  try {
+    const ids = cart.items.map(r => r._id);
+    const res = await fetch(`${BASE_URL}/api/content/download-zip`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ resourceIds: ids }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: 'Download failed' }));
+      console.error('ZIP download failed:', err.message);
+      return;
+    }
+
+    const blob    = await res.blob();
+    const url     = URL.createObjectURL(blob);
+    const a       = document.createElement('a');
+    a.href        = url;
+    a.download    = `course-materials-${cart.count}-files.zip`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+
+    downloadDone.value = true;
+    setTimeout(() => { downloadDone.value = false; }, 3000);
+  } finally {
+    downloading.value = false;
   }
-  downloading.value  = false;
-  downloadDone.value = true;
-  setTimeout(() => { downloadDone.value = false; }, 3000);
 }
 </script>
 

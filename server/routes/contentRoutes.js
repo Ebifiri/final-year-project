@@ -197,4 +197,69 @@ router.delete('/resources/:resourceId', protect, async (req, res) => {
   }
 });
 
+// ── POST /api/content/download-zip  — public, CORS wildcard ─────────────────
+// Accepts { resourceIds: [id, id, ...] }, creates a ZIP archive on the fly,
+// and streams it to the browser as a single file download.
+// Using a server-side ZIP avoids ALL browser multi-download restrictions
+// (popup blockers, Chrome cross-origin iframe download policy, etc.)
+router.post('/download-zip', async (req, res) => {
+  try {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'POST');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+    const { resourceIds } = req.body;
+    if (!Array.isArray(resourceIds) || resourceIds.length === 0) {
+      return res.status(400).json({ message: 'Provide a non-empty resourceIds array' });
+    }
+
+    const resources = await Resource.find({ _id: { $in: resourceIds } });
+    if (!resources.length) {
+      return res.status(404).json({ message: 'No matching resources found' });
+    }
+
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', 'attachment; filename="course-materials.zip"');
+
+    const archiver = (await import('archiver')).default;
+    const archive  = archiver('zip', { zlib: { level: 6 } });
+    archive.pipe(res);
+
+    for (const resource of resources) {
+      if (!resource.fileUrl) continue;
+
+      // Build filename: "<title>.<ext>"
+      const basename = resource.fileUrl.split('?')[0].split(/[\/\\]/).pop() ?? '';
+      const ext      = basename.includes('.') ? basename.split('.').pop() : '';
+      const filename = resource.title + (ext ? `.${ext}` : '');
+
+      if (resource.fileUrl.startsWith('http')) {
+        // Remote file (Cloudinary) — fetch and stream into archive
+        const upstream = await fetch(resource.fileUrl);
+        if (!upstream.ok) continue; // skip files we can't reach
+        const { Readable } = await import('stream');
+        archive.append(Readable.fromWeb(upstream.body), { name: filename });
+      } else {
+        // Local filesystem path
+        const { existsSync } = await import('fs');
+        if (!existsSync(resource.fileUrl)) continue; // skip missing files
+        archive.file(resource.fileUrl, { name: filename });
+      }
+    }
+
+    await archive.finalize();
+  } catch (err) {
+    console.error('ZIP download error:', err);
+    if (!res.headersSent) res.status(500).json({ message: err.message });
+  }
+});
+
+// Handle CORS preflight for the ZIP endpoint
+router.options('/download-zip', (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.sendStatus(204);
+});
+
 export default router;
