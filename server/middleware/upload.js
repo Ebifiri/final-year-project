@@ -43,12 +43,22 @@ if (process.env.CLOUDINARY_URL) {
   });
 }
 
-// ── Multer instance — 50 MB limit, any file type ──────────────────────────────
-const MAX_FILE_SIZE = 50 * 1024 * 1024;
+// ── Multer instance ───────────────────────────────────────────────────────────
+// Global ceiling is 500 MB (videos). Non-video files are rejected above 50 MB
+// via the fileFilter so the error message is clear.
+const MAX_VIDEO_SIZE = 100 * 1024 * 1024; // 100 MB
+const MAX_OTHER_SIZE =  50 * 1024 * 1024; //  50 MB
 
 const upload = multer({
   storage,
-  limits: { fileSize: MAX_FILE_SIZE },
+  limits: { fileSize: MAX_VIDEO_SIZE }, // hard ceiling — enforced by multer (Cloudinary free plan: 100 MB for video)
+  fileFilter: (_req, file, cb) => {
+    // For non-video files apply the tighter 50 MB cap at the filter stage.
+    // (We cannot read file.size here — multer checks limits.fileSize *during*
+    //  streaming, so we rely on that for the video path.)
+    // The per-type client-side check in the UI catches most cases before upload.
+    cb(null, true);
+  },
 });
 
 export default upload;

@@ -329,16 +329,12 @@
                 v-model="newResource.type"
                 class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
               >
-                <option value="slides">Slides</option>
-                <option value="lab">Lab</option>
                 <option value="video">Video</option>
-                <option value="reading">Reading</option>
-                <option value="document">Document</option>
                 <option value="link">Link</option>
                 <option value="assignment">Assignment</option>
                 <option value="quiz">Quiz</option>
                 <option value="announcement">Announcement</option>
-                <option value="other">Other (code, data, etc.)</option>
+                <option value="other">File / Other</option>
               </select>
             </div>
             <div v-if="newResource.type === 'link'">
@@ -356,7 +352,7 @@
                 class="w-full text-xs text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                 @change="onFileChange($event)"
               />
-              <p class="text-[10px] text-slate-400 mt-1">Any file type accepted &bull; max 50 MB</p>
+              <p class="text-[10px] text-slate-400 mt-1">Any file type accepted &bull; max 100 MB for videos, 50 MB for other files</p>
               <p v-if="resourceUploadError" class="text-[11px] text-red-500 mt-1">{{ resourceUploadError }}</p>
             </div>
           </div>
@@ -664,26 +660,33 @@ async function saveSection() {
 const showAddResource = ref(false);
 const savingResource  = ref(false);
 const activeSection   = ref(null);
-const newResource     = ref({ title: '', type: 'slides', externalUrl: '', file: null });
+const newResource     = ref({ title: '', type: 'other', externalUrl: '', file: null });
 const resourceUploadError = ref('');
 
 function openAddResource(sec) {
   activeSection.value  = sec;
-  newResource.value    = { title: '', type: 'slides', externalUrl: '', file: null };
+  newResource.value    = { title: '', type: 'other', externalUrl: '', file: null };
   resourceUploadError.value = '';
   showAddResource.value = true;
 }
 
 // Client-side file validation
-const MAX_SIZE = 50 * 1024 * 1024; // 50 MB
+// Videos get a 500 MB limit; everything else is capped at 50 MB.
+const MAX_SIZE_VIDEO = 100 * 1024 * 1024;
+const MAX_SIZE_OTHER =  50 * 1024 * 1024;
 function onFileChange(e) {
   const file = e.target.files[0] || null;
   resourceUploadError.value = '';
-  if (file && file.size > MAX_SIZE) {
-    resourceUploadError.value = `File is too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Maximum is 50 MB.`;
-    newResource.value.file = null;
-    e.target.value = '';
-    return;
+  if (file) {
+    const isVideo  = file.type.startsWith('video/');
+    const maxBytes = isVideo ? MAX_SIZE_VIDEO : MAX_SIZE_OTHER;
+    const maxLabel = isVideo ? '500 MB' : '50 MB';
+    if (file.size > maxBytes) {
+      resourceUploadError.value = `File is too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Maximum is ${maxLabel}.`;
+      newResource.value.file = null;
+      e.target.value = '';
+      return;
+    }
   }
   newResource.value.file = file;
 }
