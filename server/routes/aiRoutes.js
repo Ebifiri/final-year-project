@@ -69,7 +69,7 @@ router.post('/analyze', protect, async (req, res) => {
 
     // Call Gemini
     const genAI  = new GoogleGenerativeAI(apiKey);
-    const model  = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const model  = genAI.getGenerativeModel({ model: 'gemini-flash-latest' });
     const result = await model.generateContent([
       { inlineData: { mimeType, data: fileBuffer.toString('base64') } },
       PROMPTS[action],
@@ -115,7 +115,7 @@ router.post('/chat', protect, async (req, res) => {
 
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
-      model: 'gemini-1.5-flash',
+      model: 'gemini-flash-latest',
       systemInstruction:
         'You are a friendly and knowledgeable academic study assistant. ' +
         'Help students understand course material, explain concepts clearly, ' +

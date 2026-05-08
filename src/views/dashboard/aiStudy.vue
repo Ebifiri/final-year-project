@@ -10,7 +10,7 @@
           </div>
           <div>
             <h1 class="text-2xl font-bold">AI Study Assistant</h1>
-            <p class="text-violet-200 text-sm">Powered by Google Gemini 1.5 Flash</p>
+            <p class="text-violet-200 text-sm">Powered by Google Gemini Flash</p>
           </div>
         </div>
         <p class="text-violet-100 text-sm max-w-xl mt-2">
