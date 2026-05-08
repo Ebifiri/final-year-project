@@ -212,7 +212,11 @@
                       <span class="text-sm text-blue-600 group-hover:text-blue-800 group-hover:underline underline-offset-2 transition-colors leading-snug block truncate">
                         {{ res.title }}
                       </span>
-                      <span class="text-[10px] text-slate-400 mt-0.5 block">
+                      <!-- Announcement body text -->
+                      <p v-if="res.type === 'announcement' && res.description" class="text-xs text-slate-600 mt-1 leading-relaxed whitespace-pre-wrap">
+                        {{ res.description }}
+                      </p>
+                      <span v-else class="text-[10px] text-slate-400 mt-0.5 block">
                         Uploaded {{ formatDate(res.createdAt) }}
                       </span>
                     </div>
@@ -342,7 +346,18 @@
                 <option value="other">File / Other</option>
               </select>
             </div>
-            <div v-if="newResource.type === 'link'">
+            <!-- Announcement body textarea -->
+            <div v-if="newResource.type === 'announcement'">
+              <label class="text-xs font-semibold text-slate-600 mb-1 block">Message</label>
+              <textarea
+                v-model="newResource.description"
+                rows="4"
+                class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
+                placeholder="Write your announcement here…"
+              />
+            </div>
+            <!-- Link URL -->
+            <div v-else-if="newResource.type === 'link'">
               <label class="text-xs font-semibold text-slate-600 mb-1 block">External URL</label>
               <input
                 v-model="newResource.externalUrl"
@@ -350,6 +365,7 @@
                 placeholder="https://…"
               />
             </div>
+            <!-- File upload -->
             <div v-else>
               <label class="text-xs font-semibold text-slate-600 mb-1 block">File (optional)</label>
               <input
@@ -723,12 +739,12 @@ async function saveSection() {
 const showAddResource = ref(false);
 const savingResource  = ref(false);
 const activeSection   = ref(null);
-const newResource     = ref({ title: '', type: 'other', externalUrl: '', file: null });
+const newResource     = ref({ title: '', type: 'other', externalUrl: '', description: '', file: null });
 const resourceUploadError = ref('');
 
 function openAddResource(sec) {
   activeSection.value  = sec;
-  newResource.value    = { title: '', type: 'other', externalUrl: '', file: null };
+  newResource.value    = { title: '', type: 'other', externalUrl: '', description: '', file: null };
   resourceUploadError.value = '';
   showAddResource.value = true;
 }
@@ -763,6 +779,7 @@ async function saveResource() {
     fd.append('title', newResource.value.title.trim());
     fd.append('type',  newResource.value.type);
     if (newResource.value.externalUrl) fd.append('externalUrl', newResource.value.externalUrl);
+    if (newResource.value.description) fd.append('description', newResource.value.description);
     if (newResource.value.file)        fd.append('file', newResource.value.file);
 
     await api.postForm(`/api/content/sections/${activeSection.value._id}/resources`, fd);

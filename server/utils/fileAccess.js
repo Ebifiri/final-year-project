@@ -1,10 +1,17 @@
 /**
  * fileAccess.js — shared helper for fetching resource files server-side.
  *
- * Cloudinary raw resources can require signed URLs when the account has
- * access-control settings that block unauthenticated delivery.
- * We generate a signed URL using the API secret stored in CLOUDINARY_URL
- * so server-side fetches always succeed regardless of account settings.
+ * WHY private_download_url instead of signed delivery URLs?
+ * ---------------------------------------------------------
+ * cloudinary.url() + sign_url:true generates a *delivery* URL
+ * (res.cloudinary.com) which can still return 401 when the Cloudinary
+ * account has strict access-control or CDN restrictions on the free plan.
+ *
+ * cloudinary.utils.private_download_url() generates a URL that hits the
+ * Cloudinary *API* endpoint (api.cloudinary.com/v1_1/…) instead, which:
+ *  - Always authenticates with your API key + secret (no CDN restrictions)
+ *  - Returns the original file bytes directly
+ *  - Works regardless of the account's delivery access-control settings
  */
 import { v2 as cloudinary } from 'cloudinary';
 
@@ -17,24 +24,31 @@ function resourceType(mimeType = '') {
 
 /**
  * Return the best URL for server-side fetching of a resource.
- * - If the resource has a filePublicId (Cloudinary), return a signed URL.
- * - Otherwise return the raw fileUrl (may be a local path or unsigned URL).
+ * - If the resource has a filePublicId (Cloudinary), return a private download URL.
+ * - Otherwise return the raw fileUrl (local filesystem path in dev).
  */
 export function getServerFetchUrl(resource) {
   const { fileUrl, filePublicId, mimeType } = resource;
   if (!fileUrl) return null;
 
-  // For Cloudinary files use a signed URL — bypasses 401 from access control
   if (fileUrl.startsWith('http') && filePublicId) {
-    return cloudinary.url(filePublicId, {
-      resource_type: resourceType(mimeType),
-      type:          'upload',
-      sign_url:      true,   // includes HMAC-SHA1 signature using API_SECRET
-      secure:        true,
+    const resType = resourceType(mimeType);
+
+    // Extract the file extension from the public_id so Cloudinary knows the format.
+    // public_id is stored as e.g. "pau-lms/1234567890-filename.pdf"
+    const lastSegment = filePublicId.split('/').pop() ?? '';
+    const dotIdx      = lastSegment.lastIndexOf('.');
+    const format      = dotIdx > -1 ? lastSegment.slice(dotIdx + 1) : '';
+
+    // private_download_url hits api.cloudinary.com (not the delivery CDN),
+    // so it is immune to access-control 401s on the free plan.
+    return cloudinary.utils.private_download_url(filePublicId, format, {
+      resource_type: resType,
+      expires_at:    Math.floor(Date.now() / 1000) + 3600, // valid for 1 hour
     });
   }
 
-  // Local filesystem path or unsigned URL (fallback)
+  // Local filesystem path (dev — CLOUDINARY_URL not set)
   return fileUrl;
 }
 

@@ -134,7 +134,7 @@ router.post('/sections/:sectionId/resources',
       const allowed = await canManageCourse(req.user._id, req.user.role, section.courseId.code);
       if (!allowed) return res.status(403).json({ message: 'Not authorised' });
 
-      const { title, type, externalUrl, assignmentRef, quizRef } = req.body;
+      const { title, type, externalUrl, description, assignmentRef, quizRef } = req.body;
       const count = await Resource.countDocuments({ sectionId: section._id });
 
       const resourceData = {
@@ -143,6 +143,7 @@ router.post('/sections/:sectionId/resources',
         title,
         type,
         externalUrl:   externalUrl   || undefined,
+        description:   description   || undefined,
         assignmentRef: assignmentRef || undefined,
         quizRef:       quizRef       || undefined,
         uploadedBy:    req.user._id,
