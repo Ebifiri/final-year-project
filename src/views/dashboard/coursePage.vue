@@ -234,11 +234,16 @@
                     <!-- Single download button -->
                     <button
                       v-if="isDownloadable(res)"
-                      class="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-blue-100 text-slate-300 hover:text-blue-600 transition-all"
-                      title="Download"
+                      :class="[
+                        'opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-blue-100 transition-all',
+                        downloadingId === res._id ? 'text-blue-500 cursor-wait' : 'text-slate-300 hover:text-blue-600'
+                      ]"
+                      :disabled="downloadingId === res._id"
+                      :title="downloadingId === res._id ? 'Downloading…' : 'Download'"
                       @click.stop="downloadSingle(res)"
                     >
-                      <Download class="w-3.5 h-3.5" />
+                      <Loader2 v-if="downloadingId === res._id" class="w-3.5 h-3.5 animate-spin" />
+                      <Download v-else class="w-3.5 h-3.5" />
                     </button>
                     <!-- Delete resource (lecturer/admin, visible on hover) -->
                     <button
@@ -411,6 +416,32 @@
     <!-- AI Study Assistant modal -->
     <AIStudyModal v-model="showAI" :resource="aiResource" />
 
+    <!-- ── TOAST NOTIFICATION ──────────────────────────────────────── -->
+    <Teleport to="body">
+      <Transition
+        enter-active-class="transition-all duration-300 ease-out"
+        enter-from-class="translate-y-4 opacity-0"
+        enter-to-class="translate-y-0 opacity-100"
+        leave-active-class="transition-all duration-200 ease-in"
+        leave-from-class="translate-y-0 opacity-100"
+        leave-to-class="translate-y-4 opacity-0"
+      >
+        <div
+          v-if="toast.show"
+          :class="[
+            'fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] flex items-center gap-3 px-5 py-3 rounded-2xl shadow-xl border text-sm font-semibold whitespace-nowrap',
+            toast.type === 'success'
+              ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+              : 'bg-red-50 border-red-200 text-red-800'
+          ]"
+        >
+          <Check v-if="toast.type === 'success'" class="w-4 h-4 text-emerald-500 flex-shrink-0" />
+          <AlertTriangle v-else class="w-4 h-4 text-red-500 flex-shrink-0" />
+          {{ toast.message }}
+        </div>
+      </Transition>
+    </Teleport>
+
   </main>
 </template>
 
@@ -423,7 +454,7 @@ import {
   FlaskConical, Video, BookLock, UserMinus, Loader2, LogIn,
   Plus, PlusCircle, FolderOpen, ExternalLink, Trash2, Package,
   Presentation, FileSpreadsheet, FileCode2, FileImage, Music,
-  Archive, Download, File, CheckSquare, Sparkles,
+  Archive, Download, File, CheckSquare, Sparkles, Check, AlertTriangle,
 } from 'lucide-vue-next';
 import AIStudyModal from '@/components/AIStudyModal.vue';
 import { api }                   from '@/api/client.js';
@@ -440,6 +471,15 @@ const code     = decodeURIComponent(route.params.code ?? '').toUpperCase();
 const course   = ref(null);
 const loading  = ref(true);
 const enrolling = ref(false);
+
+// ── Toast ──────────────────────────────────────────────────────────────────────
+const toast = ref({ show: false, message: '', type: 'success' });
+let toastTimer = null;
+function showToast(message, type = 'success') {
+  clearTimeout(toastTimer);
+  toast.value = { show: true, message, type };
+  toastTimer = setTimeout(() => { toast.value.show = false; }, 4000);
+}
 
 // ── Enrollment state ──────────────────────────────────────────────────────────
 const enrolled = computed(() => enrollmentStore.isEnrolled(code));
@@ -616,14 +656,37 @@ function isDownloadable(res) {
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
-// Simple anchor click — the server's Content-Disposition: attachment
-// forces a download without any CORS requirement.
-function downloadSingle(resource) {
-  const a = document.createElement('a');
-  a.href = `${BASE_URL}/api/content/download/${resource._id}`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
+// Single file download — fetch as blob then trigger anchor.
+// A plain anchor.click() navigates the tab (causing Chrome's "page might be
+// temporarily down" error for binary files like PDFs and videos).
+const downloadingId = ref(null); // tracks which resource is mid-download
+
+async function downloadSingle(resource) {
+  if (downloadingId.value) return;
+  downloadingId.value = resource._id;
+  try {
+    const res = await fetch(`${BASE_URL}/api/content/download/${resource._id}`);
+    if (!res.ok) throw new Error(`Server returned ${res.status}`);
+
+    const blob     = await res.blob();
+    const blobUrl  = URL.createObjectURL(blob);
+    const basename = resource.fileUrl?.split('?')[0].split(/[\/\\]/).pop() ?? '';
+    const ext      = basename.includes('.') ? '.' + basename.split('.').pop() : '';
+    const filename = resource.title + ext;
+
+    const a    = document.createElement('a');
+    a.href     = blobUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
+  } catch (err) {
+    console.error('Single download failed:', err);
+    showToast('Download failed. Please try again.', 'error');
+  } finally {
+    downloadingId.value = null;
+  }
 }
 
 // ── Date formatter ────────────────────────────────────────────────────────────
@@ -680,7 +743,7 @@ function onFileChange(e) {
   if (file) {
     const isVideo  = file.type.startsWith('video/');
     const maxBytes = isVideo ? MAX_SIZE_VIDEO : MAX_SIZE_OTHER;
-    const maxLabel = isVideo ? '500 MB' : '50 MB';
+    const maxLabel = isVideo ? '100 MB' : '50 MB';
     if (file.size > maxBytes) {
       resourceUploadError.value = `File is too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Maximum is ${maxLabel}.`;
       newResource.value.file = null;
@@ -705,8 +768,10 @@ async function saveResource() {
     await api.postForm(`/api/content/sections/${activeSection.value._id}/resources`, fd);
     showAddResource.value = false;
     await loadContent();
+    showToast(`"${newResource.value.title.trim()}" uploaded successfully.`, 'success');
   } catch (e) {
     resourceUploadError.value = e.message || 'Upload failed. Please try again.';
+    showToast(e.message || 'Upload failed. Please try again.', 'error');
   } finally {
     savingResource.value = false;
   }
