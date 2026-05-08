@@ -2,6 +2,7 @@ import express from 'express';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import Resource from '../models/Resource.js';
 import protect  from '../middleware/auth.js';
+import { fetchResourceBuffer } from '../utils/fileAccess.js';
 
 const router = express.Router();
 
@@ -58,30 +59,12 @@ router.post('/analyze', protect, async (req, res) => {
       });
     }
 
-    // Load the file bytes — handle both Cloudinary URLs and local disk paths
+    // Fetch file bytes via signed Cloudinary URL (bypasses 401 access-control errors)
     let fileBuffer;
-    if (resource.fileUrl.startsWith('http')) {
-      console.log(`[AI] Fetching: ${resource.fileUrl}`);
-      const upstream = await fetch(resource.fileUrl);
-      if (!upstream.ok) {
-        const statusText = `HTTP ${upstream.status} ${upstream.statusText}`;
-        console.error(`[AI] Cloudinary fetch failed: ${statusText} — ${resource.fileUrl}`);
-        return res.status(502).json({
-          message: `Could not fetch file from storage (${statusText}). ` +
-            'If this is a Cloudinary URL, check that CLOUDINARY_URL is correctly set on Render and re-upload the file.',
-        });
-      }
-      fileBuffer = Buffer.from(await upstream.arrayBuffer());
-    } else {
-      // Local filesystem path (CLOUDINARY_URL not set in this environment)
-      const { readFile } = await import('fs/promises');
-      const { existsSync } = await import('fs');
-      if (!existsSync(resource.fileUrl)) {
-        return res.status(404).json({
-          message: 'File not found on disk. Set CLOUDINARY_URL on Render so files are stored persistently, then re-upload.',
-        });
-      }
-      fileBuffer = await readFile(resource.fileUrl);
+    try {
+      fileBuffer = await fetchResourceBuffer(resource);
+    } catch (fetchErr) {
+      return res.status(502).json({ message: fetchErr.message });
     }
 
     // Call Gemini

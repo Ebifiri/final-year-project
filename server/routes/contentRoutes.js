@@ -4,6 +4,7 @@ import Section  from '../models/Section.js';
 import Resource from '../models/Resource.js';
 import protect  from '../middleware/auth.js';
 import upload   from '../middleware/upload.js';
+import { getServerFetchUrl } from '../utils/fileAccess.js';
 
 const router = express.Router();
 
@@ -37,16 +38,18 @@ router.get('/download/:resourceId', async (req, res) => {
     res.setHeader('Content-Type', resource.mimeType || 'application/octet-stream');
 
     if (resource.fileUrl.startsWith('http')) {
-      // ── Remote URL (Cloudinary) ──────────────────────────────────────────
-      const upstream = await fetch(resource.fileUrl);
+      // ── Remote URL — use signed URL to bypass Cloudinary access control ──
+      const fetchUrl = getServerFetchUrl(resource);
+      const upstream = await fetch(fetchUrl);
       if (!upstream.ok) {
-        return res.status(502).json({ message: 'Failed to fetch file from storage' });
+        return res.status(502).json({ message: `Failed to fetch file (HTTP ${upstream.status})` });
       }
       const len = upstream.headers.get('content-length');
       if (len) res.setHeader('Content-Length', len);
 
       const { Readable } = await import('stream');
       Readable.fromWeb(upstream.body).pipe(res);
+
 
     } else {
       // ── Local filesystem path (CLOUDINARY_URL not set) ───────────────────
@@ -234,15 +237,22 @@ router.post('/download-zip', async (req, res) => {
       const filename = resource.title + (ext ? `.${ext}` : '');
 
       if (resource.fileUrl.startsWith('http')) {
-        // Remote file (Cloudinary) — fetch and stream into archive
-        const upstream = await fetch(resource.fileUrl);
-        if (!upstream.ok) continue; // skip files we can't reach
+        // Remote (Cloudinary) — use signed URL to bypass access control
+        const fetchUrl  = getServerFetchUrl(resource);
+        const upstream  = await fetch(fetchUrl);
+        if (!upstream.ok) {
+          console.warn(`ZIP: skipping "${filename}" — HTTP ${upstream.status}`);
+          continue;
+        }
         const { Readable } = await import('stream');
         archive.append(Readable.fromWeb(upstream.body), { name: filename });
       } else {
         // Local filesystem path
         const { existsSync } = await import('fs');
-        if (!existsSync(resource.fileUrl)) continue; // skip missing files
+        if (!existsSync(resource.fileUrl)) {
+          console.warn(`ZIP: skipping "${filename}" — file not found on disk`);
+          continue;
+        }
         archive.file(resource.fileUrl, { name: filename });
       }
     }
