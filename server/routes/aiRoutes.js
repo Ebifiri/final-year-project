@@ -97,4 +97,48 @@ router.post('/analyze', protect, async (req, res) => {
   }
 });
 
+// ── POST /api/ai/chat ─────────────────────────────────────────────────────────
+// General-purpose study chatbot. Accepts:
+//   { message: string, history: [{role:'user'|'model', text:string}] }
+// History is kept client-side and re-sent each turn (stateless server).
+router.post('/chat', protect, async (req, res) => {
+  try {
+    const { message, history = [] } = req.body;
+    if (!message?.trim()) {
+      return res.status(400).json({ message: 'message is required' });
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return res.status(503).json({ message: 'AI service not configured' });
+    }
+
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-1.5-flash',
+      systemInstruction:
+        'You are a friendly and knowledgeable academic study assistant. ' +
+        'Help students understand course material, explain concepts clearly, ' +
+        'answer study questions, and provide guidance on academic topics. ' +
+        'Keep responses concise, well-structured, and use markdown formatting where helpful.',
+    });
+
+    // Reconstruct chat history in Gemini's format
+    const chat = model.startChat({
+      history: history.map(h => ({
+        role:  h.role,
+        parts: [{ text: h.text }],
+      })),
+    });
+
+    const result = await chat.sendMessage(message.trim());
+    const reply  = result.response.text();
+
+    res.json({ reply });
+  } catch (err) {
+    console.error('AI chat error:', err);
+    res.status(500).json({ message: err.message });
+  }
+});
+
 export default router;

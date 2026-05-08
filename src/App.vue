@@ -1,15 +1,35 @@
 <script setup>
 import NavBar    from './components/navBar.vue';
 import AppFooter from './components/footer.vue';
+import AIStudyModal from './components/AIStudyModal.vue';
 import { computed, ref, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { Download, X, Trash2, Loader2, CheckSquare, Clock } from 'lucide-vue-next';
+import { Download, X, Trash2, Loader2, CheckSquare, Clock, Sparkles } from 'lucide-vue-next';
 import { useDownloadCart } from '@/stores/downloadCart.js';
 import { useAuthStore }    from '@/stores/auth.js';
 
 const cart   = useDownloadCart();
 const auth   = useAuthStore();
 const router = useRouter();
+
+// ── AI from cart ─────────────────────────────────────────────────────────────
+const AI_SUPPORTED = new Set([
+  'application/pdf',
+  'text/plain', 'text/html', 'text/csv', 'text/markdown',
+  'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+]);
+const showCartAI  = ref(false);
+const cartAIItem  = ref(null);
+
+const firstAiItem = computed(() =>
+  cart.items.find(r => r.fileUrl && AI_SUPPORTED.has(r.mimeType)) ?? null
+);
+
+function openCartAI() {
+  if (!firstAiItem.value) return;
+  cartAIItem.value = firstAiItem.value;
+  showCartAI.value = true;
+}
 
 // ── Session-timeout toast ────────────────────────────────────────────────────
 const sessionExpiredToast = ref(false);
@@ -175,6 +195,17 @@ async function downloadAll() {
             </p>
           </div>
 
+          <!-- AI Study (only when compatible items are in cart) -->
+          <button
+            v-if="firstAiItem"
+            class="flex items-center gap-1.5 px-3 py-1.5 bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold rounded-xl transition-colors flex-shrink-0"
+            :title="'AI Study: ' + firstAiItem.title"
+            @click="openCartAI"
+          >
+            <Sparkles class="w-3.5 h-3.5" />
+            AI Study
+          </button>
+
           <!-- Download All -->
           <button
             class="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs font-bold rounded-xl transition-colors disabled:opacity-60 flex-shrink-0"
@@ -199,6 +230,9 @@ async function downloadAll() {
       </div>
     </Transition>
   </Teleport>
+
+  <!-- AI Study Modal from cart -->
+  <AIStudyModal v-model="showCartAI" :resource="cartAIItem" />
 </template>
 
 <style scoped></style>
