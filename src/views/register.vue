@@ -178,10 +178,8 @@ async function handleRegister() {
       password: password.value,
     });
 
-    // Auto log-in after registration
-    auth.token = data.token;
-    auth.user  = data.user;
-    localStorage.setItem('pau_token', data.token);
+    // Auto log-in after registration via the auth store (keeps Pinia in sync)
+    auth.setSession(data.token, data.user);
 
     router.push('/dashboard/home');
   } catch (err) {

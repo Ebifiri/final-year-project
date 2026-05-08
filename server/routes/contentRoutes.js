@@ -15,14 +15,11 @@ async function canManageCourse(userId, userRole, courseCode) {
   return course?.lecturers?.some(id => id.equals(userId)) ?? false;
 }
 
-// ── GET /api/content/download/:resourceId  — public, CORS wildcard ───────────
-// IMPORTANT: Must be registered BEFORE /:courseCode to avoid Express treating
-// "download" as a course code wildcard.
-// No auth token needed. CORS is set to * so cross-origin fetch+blob works
-// from any frontend (e.g. Netlify → Render).
+// ── GET /api/content/download/:resourceId  ────────────────────────────────────
+// MUST be before /:courseCode to prevent Express treating "download" as a code.
+// Handles both Cloudinary HTTP URLs and local filesystem paths (dev / no Cloudinary).
 router.get('/download/:resourceId', async (req, res) => {
   try {
-    // Allow any origin — needed for cross-origin fetch+blob in the browser
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET');
 
@@ -31,26 +28,41 @@ router.get('/download/:resourceId', async (req, res) => {
       return res.status(404).json({ message: 'Resource not found or has no file' });
     }
 
-    // Fetch raw bytes from Cloudinary (no transformations — avoids binary corruption)
-    const upstream = await fetch(resource.fileUrl);
-    if (!upstream.ok) {
-      return res.status(502).json({ message: 'Failed to fetch file from storage' });
-    }
+    // Build filename: "<resource title>.<original extension>"
+    const basename = resource.fileUrl.split('?')[0].split(/[\\/]/).pop() ?? '';
+    const ext      = basename.includes('.') ? basename.split('.').pop() : '';
+    const safeName = resource.title + (ext ? `.${ext}` : '');
 
-    // Build a human-readable filename: "<resource title>.<original extension>"
-    const urlBasename = resource.fileUrl.split('?')[0].split('/').pop() ?? '';
-    const ext         = urlBasename.includes('.') ? urlBasename.split('.').pop() : '';
-    const safeName    = resource.title + (ext ? `.${ext}` : '');
-
-    // Set response headers
     res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(safeName)}`);
-    res.setHeader('Content-Type', resource.mimeType || upstream.headers.get('content-type') || 'application/octet-stream');
-    const contentLength = upstream.headers.get('content-length');
-    if (contentLength) res.setHeader('Content-Length', contentLength);
+    res.setHeader('Content-Type', resource.mimeType || 'application/octet-stream');
 
-    // Stream bytes to client unchanged
-    const { Readable } = await import('stream');
-    Readable.fromWeb(upstream.body).pipe(res);
+    if (resource.fileUrl.startsWith('http')) {
+      // ── Remote URL (Cloudinary) ──────────────────────────────────────────
+      const upstream = await fetch(resource.fileUrl);
+      if (!upstream.ok) {
+        return res.status(502).json({ message: 'Failed to fetch file from storage' });
+      }
+      const len = upstream.headers.get('content-length');
+      if (len) res.setHeader('Content-Length', len);
+
+      const { Readable } = await import('stream');
+      Readable.fromWeb(upstream.body).pipe(res);
+
+    } else {
+      // ── Local filesystem path (CLOUDINARY_URL not set) ───────────────────
+      const { createReadStream, existsSync, statSync } = await import('fs');
+
+      if (!existsSync(resource.fileUrl)) {
+        return res.status(404).json({
+          message:
+            'File not found on disk. Set CLOUDINARY_URL in your Render environment ' +
+            'variables so files are stored persistently, then re-upload.',
+        });
+      }
+
+      res.setHeader('Content-Length', statSync(resource.fileUrl).size);
+      createReadStream(resource.fileUrl).pipe(res);
+    }
 
   } catch (err) {
     console.error('Download proxy error:', err);
@@ -105,12 +117,9 @@ router.post('/:courseCode/sections', protect, async (req, res) => {
 // ── POST /api/content/sections/:sectionId/resources  — lecturer/admin only ────
 router.post('/sections/:sectionId/resources',
   protect,
-  // Run multer manually so upload errors surface as JSON responses
   (req, res, next) => {
     upload.single('file')(req, res, (err) => {
-      if (err) {
-        return res.status(400).json({ message: err.message || 'File upload failed' });
-      }
+      if (err) return res.status(400).json({ message: err.message || 'File upload failed' });
       next();
     });
   },
@@ -138,9 +147,9 @@ router.post('/sections/:sectionId/resources',
       };
 
       if (req.file) {
-        resourceData.fileUrl      = req.file.path;      // Cloudinary secure URL
-        resourceData.filePublicId = req.file.filename;  // Cloudinary public_id
-        resourceData.mimeType     = req.file.mimetype;  // e.g. application/vnd.ms-powerpoint
+        resourceData.fileUrl      = req.file.path;     // Cloudinary URL or local path
+        resourceData.filePublicId = req.file.filename; // Cloudinary public_id
+        resourceData.mimeType     = req.file.mimetype;
       }
 
       const resource = await Resource.create(resourceData);
@@ -163,7 +172,6 @@ router.delete('/sections/:sectionId', protect, async (req, res) => {
 
     await Resource.deleteMany({ sectionId: section._id });
     await section.deleteOne();
-
     res.json({ message: 'Section deleted' });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -188,7 +196,5 @@ router.delete('/resources/:resourceId', protect, async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 });
-
-// (download route is registered above, before /:courseCode)
 
 export default router;

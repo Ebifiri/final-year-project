@@ -1,11 +1,28 @@
 <script setup>
 import NavBar    from './components/navBar.vue';
 import AppFooter from './components/footer.vue';
-import { computed, ref } from 'vue';
+import { computed, ref, onMounted, onUnmounted } from 'vue';
 import { Download, X, Trash2, Loader2, CheckSquare } from 'lucide-vue-next';
 import { useDownloadCart } from '@/stores/downloadCart.js';
+import { useAuthStore }    from '@/stores/auth.js';
 
 const cart = useDownloadCart();
+const auth = useAuthStore();
+
+// ── Auth re-hydration ───────────────────────────────────────────────────────
+// Run fetchMe() on every page load so the correct user is always in the store,
+// even on public routes (the router guard only runs for requiresAuth routes).
+// Also re-check after browser back/forward cache (bfcache) restores.
+onMounted(() => {
+  auth.fetchMe();
+
+  function onPageShow(e) {
+    // e.persisted === true means the page was restored from bfcache (back button)
+    if (e.persisted) auth.fetchMe();
+  }
+  window.addEventListener('pageshow', onPageShow);
+  onUnmounted(() => window.removeEventListener('pageshow', onPageShow));
+});
 
 const downloading  = ref(false);
 const downloadDone = ref(false);
