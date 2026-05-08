@@ -58,19 +58,31 @@ router.post('/analyze', protect, async (req, res) => {
       });
     }
 
-    // Download the raw file bytes
-    const upstream = await fetch(resource.fileUrl);
-    if (!upstream.ok) {
-      return res.status(502).json({ message: 'Could not fetch file for processing' });
+    // Load the file bytes — handle both Cloudinary URLs and local disk paths
+    let fileBuffer;
+    if (resource.fileUrl.startsWith('http')) {
+      const upstream = await fetch(resource.fileUrl);
+      if (!upstream.ok) {
+        return res.status(502).json({ message: 'Could not fetch file for processing' });
+      }
+      fileBuffer = Buffer.from(await upstream.arrayBuffer());
+    } else {
+      // Local filesystem path (CLOUDINARY_URL not set in this environment)
+      const { readFile } = await import('fs/promises');
+      const { existsSync } = await import('fs');
+      if (!existsSync(resource.fileUrl)) {
+        return res.status(404).json({
+          message: 'File not found on disk. Set CLOUDINARY_URL on Render so files are stored persistently, then re-upload.',
+        });
+      }
+      fileBuffer = await readFile(resource.fileUrl);
     }
-    const buffer = await upstream.arrayBuffer();
-    const base64  = Buffer.from(buffer).toString('base64');
 
     // Call Gemini
     const genAI  = new GoogleGenerativeAI(apiKey);
     const model  = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
     const result = await model.generateContent([
-      { inlineData: { mimeType, data: base64 } },
+      { inlineData: { mimeType, data: fileBuffer.toString('base64') } },
       PROMPTS[action],
     ]);
 

@@ -126,7 +126,7 @@ import {
   Bell, Mail, ChevronDown, ChevronRight, Search, Menu, LogIn,
   LayoutDashboard, Home as HomeIcon,
   Calendar, BookMarked, MonitorPlay, Shield,
-  X, Settings, LogOut,
+  X, Settings, LogOut, Sparkles,
 } from 'lucide-vue-next';
 import { useAuthStore }      from '@/stores/auth.js';
 import { useEnrollmentStore } from '@/stores/enrollments.js';
@@ -301,9 +301,10 @@ const SidebarContents = defineComponent({
               // Navigation
               h('div', { class: 'flex-1 overflow-y-auto py-4 px-3' }, [
                 h('div', { class: 'space-y-1 mb-8' }, [
-                  h(RouterLink, { to: '/',                onClick: props.onClose, class: 'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all' }, () => [h(HomeIcon, { class: 'w-5 h-5 text-slate-400' }), h('span', 'Site home')]),
+                  h(RouterLink, { to: '/',                onClick: props.onClose, class: 'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all' }, () => [h(HomeIcon,        { class: 'w-5 h-5 text-slate-400' }), h('span', 'Site home')]),
                   h(RouterLink, { to: '/dashboard/home', onClick: props.onClose, class: 'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all' }, () => [h(LayoutDashboard, { class: 'w-5 h-5 text-slate-400' }), h('span', 'Dashboard')]),
-                  h(RouterLink, { to: '/courses',        onClick: props.onClose, class: 'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all' }, () => [h(BookMarked, { class: 'w-5 h-5 text-slate-400' }), h('span', 'All courses')]),
+                  h(RouterLink, { to: '/courses',        onClick: props.onClose, class: 'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all' }, () => [h(BookMarked,      { class: 'w-5 h-5 text-slate-400' }), h('span', 'All courses')]),
+                  h(RouterLink, { to: '/dashboard/ai',  onClick: props.onClose, class: 'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all' }, () => [h(Sparkles,       { class: 'w-5 h-5 text-violet-400' }), h('span', 'AI Study Assistant')]),
                 ]),
                 // My enrolled courses
                 h('div', { class: 'px-3 mb-2' }, [

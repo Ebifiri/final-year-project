@@ -6,6 +6,7 @@ import OAuthCallback from '@/views/OAuthCallback.vue'
 import dashboardHome from '@/views/dashboard/dashboardHome.vue'
 import courseList    from '@/views/courseList.vue'
 import coursePage    from '@/views/dashboard/coursePage.vue'
+import aiStudy       from '@/views/dashboard/aiStudy.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -46,7 +47,12 @@ const router = createRouter({
       path: '/courses/:code',
       name: 'course',
       component: coursePage,
-      // public — login prompt shown inside the component if needed
+    },
+    {
+      path: '/dashboard/ai',
+      name: 'ai-study',
+      component: aiStudy,
+      meta: { requiresAuth: true },
     },
   ],
 })

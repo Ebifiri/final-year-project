@@ -41,13 +41,19 @@ const groupLabel = computed(() => {
     : `${cart.count} file${cart.count !== 1 ? 's' : ''}`;
 });
 
-function downloadOne(resource) {
-  const url = `${BASE_URL}/api/content/download/${resource._id}`;
-  const a   = document.createElement('a');
-  a.href    = url;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
+// For batch downloads we use hidden iframes instead of anchor clicks.
+// Browsers block multiple a.click() calls from a single user gesture, but
+// navigating a hidden iframe to a URL with Content-Disposition: attachment
+// triggers a download without needing a fresh gesture each time.
+function downloadViaIframe(resource) {
+  const url    = `${BASE_URL}/api/content/download/${resource._id}`;
+  const iframe = document.createElement('iframe');
+  // Position off-screen so it's invisible
+  iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;border:none;';
+  iframe.src = url;
+  document.body.appendChild(iframe);
+  // Clean up after 60 s (well after any large file would have started)
+  setTimeout(() => { if (iframe.parentNode) iframe.parentNode.removeChild(iframe); }, 60_000);
 }
 
 async function downloadAll() {
@@ -55,8 +61,10 @@ async function downloadAll() {
   downloading.value  = true;
   downloadDone.value = false;
   for (const resource of cart.items) {
-    downloadOne(resource);
-    await new Promise(r => setTimeout(r, 800));
+    downloadViaIframe(resource);
+    // Small stagger so the server isn't hit simultaneously and so the
+    // browser has time to register each download before the next
+    await new Promise(r => setTimeout(r, 1200));
   }
   downloading.value  = false;
   downloadDone.value = true;

@@ -158,7 +158,7 @@ import { ref, computed, watch } from 'vue';
 import { Sparkles, X, FileText, ListChecks, Layers, BookOpen, Copy } from 'lucide-vue-next';
 import { api } from '@/api/client.js';
 
-const props  = defineProps({ modelValue: Boolean, resource: Object });
+const props  = defineProps({ modelValue: Boolean, resource: Object, initialAction: { type: String, default: '' } });
 const emit   = defineEmits(['update:modelValue']);
 
 const ACTIONS = [
@@ -176,9 +176,13 @@ const revealed = ref(new Set());
 const flipped  = ref(new Set());
 const copied   = ref(false);
 
-// Reset when opened with a new resource
+// Reset when opened with a new resource; auto-run initialAction if provided
 watch(() => props.modelValue, (v) => {
-  if (v) { action.value = ''; result.value = null; error.value = ''; revealed.value = new Set(); flipped.value = new Set(); }
+  if (v) {
+    action.value = ''; result.value = null; error.value = '';
+    revealed.value = new Set(); flipped.value = new Set();
+    if (props.initialAction) run(props.initialAction);
+  }
 });
 
 async function run(act) {
