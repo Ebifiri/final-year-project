@@ -27,7 +27,6 @@
     "lucide-vue-next": "^1.0.0",
     "mongoose": "^9.4.1",
     "multer": "^2.1.1",
-    "multer-storage-cloudinary": "^2.2.1",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
     "passport-microsoft": "^2.1.0",
