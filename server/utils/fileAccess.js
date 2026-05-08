@@ -1,20 +1,30 @@
-/**
- * fileAccess.js — shared helper for fetching resource files server-side.
- *
- * Strategy: fetch the Cloudinary secure_url (stored as resource.fileUrl) directly.
- * For upload-type Cloudinary resources the secure_url is publicly accessible —
- * no signing required. Previous attempts to use private_download_url caused
- * HTTP 404 errors because Cloudinary misinterprets the format parameter when
- * the file extension is already embedded in the public_id.
- */
+import { v2 as cloudinary } from 'cloudinary';
 
 /**
  * Return the URL to use for server-side fetching.
- * - Cloudinary (http) → fileUrl directly (the secure_url from upload)
+ * - Cloudinary (http) → signed API URL to bypass PDF 401 restrictions
  * - Local filesystem  → the raw path (dev fallback)
  */
 export function getServerFetchUrl(resource) {
-  return resource.fileUrl || null;
+  if (!resource.fileUrl) return null;
+
+  // Local filesystem
+  if (!resource.fileUrl.startsWith('http')) {
+    return resource.fileUrl;
+  }
+
+  // Cloudinary — generate a signed download URL.
+  // We DO NOT pass a format parameter because our publicIds already include
+  // the file extension (e.g. pau-lms/12345-slides.pdf). If we passed 'pdf',
+  // Cloudinary would look for '.pdf.pdf' and return a 404.
+  const isVideo = resource.mimeType?.startsWith('video/') || resource.mimeType?.startsWith('audio/');
+  const resourceType = isVideo ? 'video' : 'raw';
+
+  return cloudinary.utils.private_download_url(
+    resource.filePublicId,
+    '', // empty format to avoid duplicate extensions!
+    { resource_type: resourceType }
+  );
 }
 
 /**

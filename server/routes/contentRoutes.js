@@ -38,8 +38,8 @@ router.get('/download/:resourceId', async (req, res) => {
     res.setHeader('Content-Type', resource.mimeType || 'application/octet-stream');
 
     if (resource.fileUrl.startsWith('http')) {
-      // ── Cloudinary URL — fetch the secure_url directly (no signing needed) ───
-      const fetchUrl = resource.fileUrl; // already the Cloudinary secure_url
+      // ── Cloudinary URL — fetch the signed API url to bypass 401s ───
+      const fetchUrl = getServerFetchUrl(resource);
       console.log(`[download] Fetching: ${fetchUrl}`);
       const upstream = await fetch(fetchUrl);
       if (!upstream.ok) {
@@ -240,8 +240,9 @@ router.post('/download-zip', async (req, res) => {
       const filename = resource.title + (ext ? `.${ext}` : '');
 
       if (resource.fileUrl.startsWith('http')) {
-        // Remote (Cloudinary) — fetch secure_url directly
-        const upstream  = await fetch(resource.fileUrl);
+        // Remote (Cloudinary) — use signed URL to bypass access control
+        const fetchUrl  = getServerFetchUrl(resource);
+        const upstream  = await fetch(fetchUrl);
         if (!upstream.ok) {
           console.warn(`ZIP: skipping "${filename}" — HTTP ${upstream.status}`);
           continue;

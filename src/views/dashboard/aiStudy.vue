@@ -46,108 +46,6 @@
         </div>
 
         <template v-else>
-          <!-- ── MATERIAL ANALYSIS SECTION ────────────────────────────── -->
-          <section>
-            <h2 class="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Analyse Course Materials</h2>
-
-            <!-- No courses enrolled -->
-            <div v-if="!enrollments.length" class="text-center py-12 bg-white rounded-2xl border border-slate-200">
-              <BookOpen class="w-12 h-12 text-slate-300 mx-auto mb-4" />
-              <p class="text-slate-600 font-semibold">You're not enrolled in any courses yet</p>
-              <RouterLink to="/courses" class="mt-3 inline-flex items-center gap-2 text-sm text-violet-600 hover:underline font-medium">
-                Browse courses →
-              </RouterLink>
-            </div>
-
-            <!-- Course list with AI resources -->
-            <div v-else class="space-y-4">
-              <div v-for="enroll in enrollments" :key="enroll._id" class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
-
-                <!-- Course header -->
-                <button
-                  class="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-50 transition-colors"
-                  @click="toggleCourse(enroll.course?._id)"
-                >
-                  <div class="flex items-center gap-3">
-                    <div class="w-9 h-9 rounded-xl bg-violet-100 flex items-center justify-center">
-                      <BookOpen class="w-5 h-5 text-violet-600" />
-                    </div>
-                    <div class="text-left">
-                      <p class="font-semibold text-slate-900 text-sm">{{ enroll.course?.name }}</p>
-                      <p class="text-xs text-slate-500">{{ enroll.course?.code }}</p>
-                    </div>
-                  </div>
-                  <div class="flex items-center gap-2">
-                    <span v-if="courseContent[enroll.course?._id]?.loading"
-                      class="w-4 h-4 border-2 border-violet-400 border-t-violet-600 rounded-full animate-spin" />
-                    <span v-else-if="aiResourceCount(enroll.course?._id) > 0"
-                      class="text-xs font-medium text-violet-600 bg-violet-50 px-2 py-0.5 rounded-full">
-                      {{ aiResourceCount(enroll.course?._id) }} file{{ aiResourceCount(enroll.course?._id) !== 1 ? 's' : '' }}
-                    </span>
-                    <ChevronDown
-                      class="w-4 h-4 text-slate-400 transition-transform duration-200"
-                      :class="openCourses.has(enroll.course?._id) ? 'rotate-180' : ''"
-                    />
-                  </div>
-                </button>
-
-                <!-- Resources list -->
-                <Transition
-                  enter-active-class="transition-all duration-200 ease-out"
-                  enter-from-class="opacity-0 -translate-y-2"
-                  enter-to-class="opacity-100 translate-y-0"
-                >
-                  <div v-if="openCourses.has(enroll.course?._id)" class="border-t border-slate-100">
-                    <div v-if="courseContent[enroll.course?._id]?.loading" class="px-5 py-4 text-sm text-slate-400">
-                      Loading materials…
-                    </div>
-                    <div v-else-if="!aiResourceCount(enroll.course?._id)" class="px-5 py-4 text-sm text-slate-400 italic">
-                      No supported files found. AI works with PDF, text, image files.
-                    </div>
-                    <div v-else class="divide-y divide-slate-50">
-                      <div
-                        v-for="res in aiResources(enroll.course?._id)"
-                        :key="res._id"
-                        class="flex items-center justify-between px-5 py-3 hover:bg-violet-50/50 transition-colors group"
-                      >
-                        <div class="flex items-center gap-3 min-w-0">
-                          <div class="w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0">
-                            <FileText class="w-4 h-4 text-slate-400" />
-                          </div>
-                          <div class="min-w-0">
-                            <p class="text-sm font-medium text-slate-800 truncate">{{ res.title }}</p>
-                            <p class="text-xs text-slate-400">{{ res.mimeType }}</p>
-                          </div>
-                        </div>
-                        <!-- Action buttons -->
-                        <div class="flex items-center gap-1.5 flex-shrink-0 ml-3">
-                          <button
-                            v-for="act in ACTIONS"
-                            :key="act.id"
-                            class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all opacity-0 group-hover:opacity-100"
-                            :class="act.cls"
-                            @click="openAI(res, act.id)"
-                          >
-                            <component :is="act.icon" class="w-3 h-3" />
-                            {{ act.label }}
-                          </button>
-                          <!-- Always-visible sparkle for mobile -->
-                          <button
-                            class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold border border-violet-300 text-violet-700 bg-violet-50 hover:bg-violet-100 transition-all sm:hidden"
-                            @click="openAI(res, 'summary')"
-                          >
-                            <Sparkles class="w-3 h-3" />
-                            AI
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </Transition>
-              </div>
-            </div>
-          </section>
-
           <!-- ── AI CHATBOT SECTION ────────────────────────────────────── -->
           <section class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
             <!-- Chat header -->
@@ -258,6 +156,108 @@
                 </button>
               </div>
               <p class="text-[10px] text-slate-400 mt-1.5 text-right">Enter to send · Shift+Enter for new line</p>
+            </div>
+          </section>
+
+          <!-- ── MATERIAL ANALYSIS SECTION ────────────────────────────── -->
+          <section>
+            <h2 class="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Analyse Course Materials</h2>
+
+            <!-- No courses enrolled -->
+            <div v-if="!enrollments.length" class="text-center py-12 bg-white rounded-2xl border border-slate-200">
+              <BookOpen class="w-12 h-12 text-slate-300 mx-auto mb-4" />
+              <p class="text-slate-600 font-semibold">You're not enrolled in any courses yet</p>
+              <RouterLink to="/courses" class="mt-3 inline-flex items-center gap-2 text-sm text-violet-600 hover:underline font-medium">
+                Browse courses →
+              </RouterLink>
+            </div>
+
+            <!-- Course list with AI resources -->
+            <div v-else class="space-y-4">
+              <div v-for="enroll in enrollments" :key="enroll._id" class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+
+                <!-- Course header -->
+                <button
+                  class="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-50 transition-colors"
+                  @click="toggleCourse(enroll.course?._id)"
+                >
+                  <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-xl bg-violet-100 flex items-center justify-center">
+                      <BookOpen class="w-5 h-5 text-violet-600" />
+                    </div>
+                    <div class="text-left">
+                      <p class="font-semibold text-slate-900 text-sm">{{ enroll.course?.name }}</p>
+                      <p class="text-xs text-slate-500">{{ enroll.course?.code }}</p>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <span v-if="courseContent[enroll.course?._id]?.loading"
+                      class="w-4 h-4 border-2 border-violet-400 border-t-violet-600 rounded-full animate-spin" />
+                    <span v-else-if="aiResourceCount(enroll.course?._id) > 0"
+                      class="text-xs font-medium text-violet-600 bg-violet-50 px-2 py-0.5 rounded-full">
+                      {{ aiResourceCount(enroll.course?._id) }} file{{ aiResourceCount(enroll.course?._id) !== 1 ? 's' : '' }}
+                    </span>
+                    <ChevronDown
+                      class="w-4 h-4 text-slate-400 transition-transform duration-200"
+                      :class="openCourses.has(enroll.course?._id) ? 'rotate-180' : ''"
+                    />
+                  </div>
+                </button>
+
+                <!-- Resources list -->
+                <Transition
+                  enter-active-class="transition-all duration-200 ease-out"
+                  enter-from-class="opacity-0 -translate-y-2"
+                  enter-to-class="opacity-100 translate-y-0"
+                >
+                  <div v-if="openCourses.has(enroll.course?._id)" class="border-t border-slate-100">
+                    <div v-if="courseContent[enroll.course?._id]?.loading" class="px-5 py-4 text-sm text-slate-400">
+                      Loading materials…
+                    </div>
+                    <div v-else-if="!aiResourceCount(enroll.course?._id)" class="px-5 py-4 text-sm text-slate-400 italic">
+                      No supported files found. AI works with PDF, text, image files.
+                    </div>
+                    <div v-else class="divide-y divide-slate-50">
+                      <div
+                        v-for="res in aiResources(enroll.course?._id)"
+                        :key="res._id"
+                        class="flex items-center justify-between px-5 py-3 hover:bg-violet-50/50 transition-colors group"
+                      >
+                        <div class="flex items-center gap-3 min-w-0">
+                          <div class="w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0">
+                            <FileText class="w-4 h-4 text-slate-400" />
+                          </div>
+                          <div class="min-w-0">
+                            <p class="text-sm font-medium text-slate-800 truncate">{{ res.title }}</p>
+                            <p class="text-xs text-slate-400">{{ res.mimeType }}</p>
+                          </div>
+                        </div>
+                        <!-- Action buttons -->
+                        <div class="flex items-center gap-1.5 flex-shrink-0 ml-3">
+                          <button
+                            v-for="act in ACTIONS"
+                            :key="act.id"
+                            class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all opacity-0 group-hover:opacity-100"
+                            :class="act.cls"
+                            @click="openAI(res, act.id)"
+                          >
+                            <component :is="act.icon" class="w-3 h-3" />
+                            {{ act.label }}
+                          </button>
+                          <!-- Always-visible sparkle for mobile -->
+                          <button
+                            class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold border border-violet-300 text-violet-700 bg-violet-50 hover:bg-violet-100 transition-all sm:hidden"
+                            @click="openAI(res, 'summary')"
+                          >
+                            <Sparkles class="w-3 h-3" />
+                            AI
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </Transition>
+              </div>
             </div>
           </section>
         </template>
