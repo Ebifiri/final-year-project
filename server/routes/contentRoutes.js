@@ -4,7 +4,7 @@ import Section  from '../models/Section.js';
 import Resource from '../models/Resource.js';
 import protect  from '../middleware/auth.js';
 import upload   from '../middleware/upload.js';
-import { getServerFetchUrl } from '../utils/fileAccess.js';
+import { getServerFetchUrl, fetchResourceStream } from '../utils/fileAccess.js';
 
 const router = express.Router();
 
@@ -29,6 +29,8 @@ router.get('/download/:resourceId', async (req, res) => {
       return res.status(404).json({ message: 'Resource not found or has no file' });
     }
 
+    console.log(`[download] Resource "${resource.title}" | fileUrl: ${resource.fileUrl} | publicId: ${resource.filePublicId || 'NONE'}`);
+
     // Build filename: "<resource title>.<original extension>"
     const basename = resource.fileUrl.split('?')[0].split(/[\\/]/).pop() ?? '';
     const ext      = basename.includes('.') ? basename.split('.').pop() : '';
@@ -37,41 +39,56 @@ router.get('/download/:resourceId', async (req, res) => {
     res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(safeName)}`);
     res.setHeader('Content-Type', resource.mimeType || 'application/octet-stream');
 
-    if (resource.fileUrl.startsWith('http')) {
-      // ── Cloudinary URL — fetch the signed API url to bypass 401s ───
-      const fetchUrl = getServerFetchUrl(resource);
-      console.log(`[download] Fetching: ${fetchUrl}`);
-      const upstream = await fetch(fetchUrl);
-      if (!upstream.ok) {
-        console.error(`[download] Cloudinary returned ${upstream.status} for ${fetchUrl}`);
-        return res.status(502).json({ message: `Failed to fetch file (HTTP ${upstream.status})` });
-      }
-      const len = upstream.headers.get('content-length');
-      if (len) res.setHeader('Content-Length', len);
+    const result = await fetchResourceStream(resource);
 
+    if (result.size) res.setHeader('Content-Length', result.size);
+
+    if (result.isWeb) {
+      // Cloudinary response — web ReadableStream needs conversion
       const { Readable } = await import('stream');
-      Readable.fromWeb(upstream.body).pipe(res);
-
-
+      Readable.fromWeb(result.stream).pipe(res);
     } else {
-      // ── Local filesystem path (CLOUDINARY_URL not set) ───────────────────
-      const { createReadStream, existsSync, statSync } = await import('fs');
-
-      if (!existsSync(resource.fileUrl)) {
-        return res.status(404).json({
-          message:
-            'File not found on disk. Set CLOUDINARY_URL in your Render environment ' +
-            'variables so files are stored persistently, then re-upload.',
-        });
-      }
-
-      res.setHeader('Content-Length', statSync(resource.fileUrl).size);
-      createReadStream(resource.fileUrl).pipe(res);
+      // Local fs.createReadStream
+      result.stream.pipe(res);
     }
 
   } catch (err) {
     console.error('Download proxy error:', err);
-    if (!res.headersSent) res.status(500).json({ message: err.message });
+    if (!res.headersSent) res.status(502).json({ message: err.message });
+  }
+});
+
+// ── GET /api/content/debug/:resourceId  — diagnostic endpoint ─────────────────
+// Returns JSON showing the stored URLs and whether the direct URL is reachable.
+// Remove in production once downloads are confirmed working.
+router.get('/debug/:resourceId', async (req, res) => {
+  try {
+    const resource = await Resource.findById(req.params.resourceId);
+    if (!resource) return res.status(404).json({ message: 'Not found' });
+
+    const info = {
+      title: resource.title,
+      mimeType: resource.mimeType,
+      fileUrl: resource.fileUrl || 'NOT SET',
+      filePublicId: resource.filePublicId || 'NOT SET',
+      isHttp: resource.fileUrl?.startsWith('http') ?? false,
+    };
+
+    // Test direct URL reachability
+    if (info.isHttp) {
+      try {
+        const directTest = await fetch(resource.fileUrl, { method: 'HEAD' });
+        info.directUrlStatus = directTest.status;
+        info.directUrlOk = directTest.ok;
+      } catch (e) {
+        info.directUrlStatus = 'FETCH_ERROR';
+        info.directUrlError = e.message;
+      }
+    }
+
+    res.json(info);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 });
 
@@ -235,28 +252,21 @@ router.post('/download-zip', async (req, res) => {
       if (!resource.fileUrl) continue;
 
       // Build filename: "<title>.<ext>"
-      const basename = resource.fileUrl.split('?')[0].split(/[\/\\]/).pop() ?? '';
+      const basename = resource.fileUrl.split('?')[0].split(/[\\/\\]/).pop() ?? '';
       const ext      = basename.includes('.') ? basename.split('.').pop() : '';
       const filename = resource.title + (ext ? `.${ext}` : '');
 
-      if (resource.fileUrl.startsWith('http')) {
-        // Remote (Cloudinary) — use signed URL to bypass access control
-        const fetchUrl  = getServerFetchUrl(resource);
-        const upstream  = await fetch(fetchUrl);
-        if (!upstream.ok) {
-          console.warn(`ZIP: skipping "${filename}" — HTTP ${upstream.status}`);
-          continue;
+      try {
+        const result = await fetchResourceStream(resource);
+        if (result.isWeb) {
+          const { Readable } = await import('stream');
+          archive.append(Readable.fromWeb(result.stream), { name: filename });
+        } else {
+          archive.append(result.stream, { name: filename });
         }
-        const { Readable } = await import('stream');
-        archive.append(Readable.fromWeb(upstream.body), { name: filename });
-      } else {
-        // Local filesystem path
-        const { existsSync } = await import('fs');
-        if (!existsSync(resource.fileUrl)) {
-          console.warn(`ZIP: skipping "${filename}" — file not found on disk`);
-          continue;
-        }
-        archive.file(resource.fileUrl, { name: filename });
+      } catch (fetchErr) {
+        console.warn(`ZIP: skipping "${filename}" — ${fetchErr.message}`);
+        continue;
       }
     }
 
