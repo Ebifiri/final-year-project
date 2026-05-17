@@ -60,31 +60,60 @@ router.get('/download/:resourceId', async (req, res) => {
 });
 
 // ── GET /api/content/debug/:resourceId  — diagnostic endpoint ─────────────────
-// Returns JSON showing the stored URLs and whether the direct URL is reachable.
-// Remove in production once downloads are confirmed working.
+// Tests all 3 download strategies and reports which ones succeed.
 router.get('/debug/:resourceId', async (req, res) => {
   try {
     const resource = await Resource.findById(req.params.resourceId);
     if (!resource) return res.status(404).json({ message: 'Not found' });
 
+    const { getAllUrls } = await import('../utils/fileAccess.js');
+    const urls = getAllUrls(resource);
+
     const info = {
       title: resource.title,
       mimeType: resource.mimeType,
-      fileUrl: resource.fileUrl || 'NOT SET',
       filePublicId: resource.filePublicId || 'NOT SET',
-      isHttp: resource.fileUrl?.startsWith('http') ?? false,
+      strategies: {},
+      recommendation: '',
     };
 
-    // Test direct URL reachability
-    if (info.isHttp) {
-      try {
-        const directTest = await fetch(resource.fileUrl, { method: 'HEAD' });
-        info.directUrlStatus = directTest.status;
-        info.directUrlOk = directTest.ok;
-      } catch (e) {
-        info.directUrlStatus = 'FETCH_ERROR';
-        info.directUrlError = e.message;
+    // Test each strategy with HEAD request
+    const strategies = [
+      { key: 'directUrl',          label: 'Direct secure_url',       url: urls.directUrl },
+      { key: 'signedDeliveryUrl',  label: 'Signed delivery URL',     url: urls.signedDeliveryUrl },
+      { key: 'privateDownloadUrl', label: 'Private download URL',    url: urls.privateDownloadUrl },
+    ];
+
+    let workingCount = 0;
+    for (const { key, label, url } of strategies) {
+      if (!url) {
+        info.strategies[key] = { url: null, status: 'N/A', note: 'No URL available (missing publicId?)' };
+        continue;
       }
+      try {
+        const resp = await fetch(url, { method: 'HEAD' });
+        const ok = resp.ok;
+        if (ok) workingCount++;
+        info.strategies[key] = {
+          url: url.substring(0, 120) + (url.length > 120 ? '…' : ''),
+          status: resp.status,
+          ok,
+          label,
+        };
+      } catch (e) {
+        info.strategies[key] = { url: url.substring(0, 120), status: 'ERROR', error: e.message, label };
+      }
+    }
+
+    if (workingCount > 0) {
+      info.recommendation = `✅ ${workingCount}/3 strategies work. Downloads should succeed.`;
+    } else {
+      info.recommendation =
+        '❌ NO strategies work. Possible causes:\n' +
+        '1. CLOUDINARY_URL env var missing or wrong on Render\n' +
+        '2. Cloudinary Settings → Security → "Restricted media types" includes this file type\n' +
+        '3. The file was deleted from Cloudinary\n' +
+        '4. Free-tier Cloudinary blocks raw file delivery — try upgrading or re-uploading as image';
     }
 
     res.json(info);

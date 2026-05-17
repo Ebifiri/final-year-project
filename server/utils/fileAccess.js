@@ -1,32 +1,49 @@
 import { v2 as cloudinary } from 'cloudinary';
 
 /**
- * fileAccess.js — Cloudinary file fetching with dual-strategy fallback.
+ * fileAccess.js — Cloudinary file fetching with triple-strategy fallback.
  *
- * Strategy 1: Fetch the stored secure_url (resource.fileUrl) directly.
- *             This works for images, videos, and — if the user has enabled
- *             PDF/ZIP delivery in Cloudinary settings — also for PDFs.
+ * Strategy 1: Direct secure_url (works for images, videos, and PDFs if delivery is enabled).
+ * Strategy 2: Signed delivery URL using cloudinary.url() with sign_url:true.
+ * Strategy 3: Cloudinary private_download_url (API-level signed download).
  *
- * Strategy 2: If the direct URL returns 401/403, fall back to a signed
- *             Cloudinary API download URL (private_download_url).
- *             This requires filePublicId to be set on the resource.
+ * For the "redirect" approach, we generate a URL and redirect the client
+ * directly to Cloudinary instead of proxying (avoids timeout/memory issues).
  */
 
-/**
- * Build a signed Cloudinary API download URL as a fallback.
- * Returns null if filePublicId is missing.
- */
-function buildSignedUrl(resource) {
+// ── MIME → Cloudinary resource_type ─────────────────────────────────────────
+function getResourceType(mimeType = '') {
+  if (mimeType.startsWith('image/')) return 'image';
+  if (mimeType.startsWith('video/') || mimeType.startsWith('audio/')) return 'video';
+  return 'raw';
+}
+
+// ── Strategy 2: Signed delivery URL ─────────────────────────────────────────
+function buildSignedDeliveryUrl(resource) {
   if (!resource.filePublicId) return null;
+  const resourceType = getResourceType(resource.mimeType);
+  try {
+    // Generate a signed URL: https://res.cloudinary.com/.../s--SIGNATURE--/publicId
+    return cloudinary.url(resource.filePublicId, {
+      resource_type: resourceType,
+      type: 'upload',
+      sign_url: true,
+      secure: true,
+    });
+  } catch (err) {
+    console.error('[fileAccess] Signed delivery URL failed:', err.message);
+    return null;
+  }
+}
 
-  const isImage = resource.mimeType?.startsWith('image/');
-  const isVideo = resource.mimeType?.startsWith('video/') || resource.mimeType?.startsWith('audio/');
-  const resourceType = isImage ? 'image' : isVideo ? 'video' : 'raw';
-
+// ── Strategy 3: Private download URL (API-level) ────────────────────────────
+function buildPrivateDownloadUrl(resource) {
+  if (!resource.filePublicId) return null;
+  const resourceType = getResourceType(resource.mimeType);
   try {
     return cloudinary.utils.private_download_url(
       resource.filePublicId,
-      '',  // no format — publicId already includes the extension
+      '', // no format suffix — publicId already has the extension
       { resource_type: resourceType }
     );
   } catch (err) {
@@ -36,8 +53,18 @@ function buildSignedUrl(resource) {
 }
 
 /**
+ * Get ALL possible download URLs for a resource — useful for diagnostics.
+ */
+export function getAllUrls(resource) {
+  return {
+    directUrl:         resource.fileUrl || null,
+    signedDeliveryUrl: buildSignedDeliveryUrl(resource),
+    privateDownloadUrl: buildPrivateDownloadUrl(resource),
+  };
+}
+
+/**
  * Return the best URL to use for server-side fetching.
- * Prefers the direct secure_url; signed URL is available as fallback.
  */
 export function getServerFetchUrl(resource) {
   if (!resource.fileUrl) return null;
@@ -46,97 +73,124 @@ export function getServerFetchUrl(resource) {
 }
 
 /**
- * Fetch a resource's file and return a Node.js Buffer.
- * Tries the direct URL first, then falls back to the signed API URL.
- * Throws a descriptive Error if both fail.
+ * Try fetching from a URL. Returns { ok, status, response } or { ok: false, status, error }.
+ */
+async function tryFetch(url, label) {
+  try {
+    console.log(`[fileAccess] ${label}: ${url}`);
+    const resp = await fetch(url);
+    if (resp.ok) {
+      console.log(`[fileAccess] ${label}: SUCCESS (${resp.status})`);
+      return { ok: true, status: resp.status, response: resp };
+    }
+    console.warn(`[fileAccess] ${label}: FAILED (${resp.status})`);
+    return { ok: false, status: resp.status };
+  } catch (err) {
+    console.error(`[fileAccess] ${label}: ERROR - ${err.message}`);
+    return { ok: false, status: 0, error: err.message };
+  }
+}
+
+/**
+ * Fetch a resource as a Buffer — tries all 3 strategies.
  */
 export async function fetchResourceBuffer(resource) {
   if (!resource.fileUrl) throw new Error('Resource has no file URL');
 
-  // Local filesystem (dev — CLOUDINARY_URL not set)
+  // Local filesystem
   if (!resource.fileUrl.startsWith('http')) {
     const { readFile } = await import('fs/promises');
     const { existsSync } = await import('fs');
     if (!existsSync(resource.fileUrl)) {
-      throw new Error(
-        'File not found on disk. Re-upload the file with CLOUDINARY_URL configured.'
-      );
+      throw new Error('File not found on disk. Re-upload with CLOUDINARY_URL configured.');
     }
     return readFile(resource.fileUrl);
   }
 
-  // ── Strategy 1: Direct secure_url ──────────────────────────────────────────
-  console.log(`[fileAccess] Trying direct URL: ${resource.fileUrl}`);
-  const directRes = await fetch(resource.fileUrl);
+  // Strategy 1: Direct secure_url
+  const direct = await tryFetch(resource.fileUrl, 'Strategy1-DirectURL');
+  if (direct.ok) return Buffer.from(await direct.response.arrayBuffer());
 
-  if (directRes.ok) {
-    console.log('[fileAccess] Direct URL succeeded');
-    return Buffer.from(await directRes.arrayBuffer());
+  // Strategy 2: Signed delivery URL
+  const signedUrl = buildSignedDeliveryUrl(resource);
+  if (signedUrl) {
+    const signed = await tryFetch(signedUrl, 'Strategy2-SignedDelivery');
+    if (signed.ok) return Buffer.from(await signed.response.arrayBuffer());
   }
 
-  console.warn(`[fileAccess] Direct URL failed: HTTP ${directRes.status}`);
-
-  // ── Strategy 2: Signed API URL fallback ────────────────────────────────────
-  const signedUrl = buildSignedUrl(resource);
-  if (!signedUrl) {
-    throw new Error(
-      `Failed to fetch file (HTTP ${directRes.status}). ` +
-      'No filePublicId available for signed fallback. Re-upload the file.'
-    );
+  // Strategy 3: Private download URL (API)
+  const apiUrl = buildPrivateDownloadUrl(resource);
+  if (apiUrl) {
+    const api = await tryFetch(apiUrl, 'Strategy3-PrivateDownload');
+    if (api.ok) return Buffer.from(await api.response.arrayBuffer());
   }
 
-  console.log(`[fileAccess] Trying signed URL: ${signedUrl}`);
-  const signedRes = await fetch(signedUrl);
-
-  if (signedRes.ok) {
-    console.log('[fileAccess] Signed URL succeeded');
-    return Buffer.from(await signedRes.arrayBuffer());
-  }
-
-  console.error(`[fileAccess] Signed URL also failed: HTTP ${signedRes.status}`);
   throw new Error(
-    `Failed to fetch file. Direct URL: HTTP ${directRes.status}, Signed URL: HTTP ${signedRes.status}. ` +
-    'Check Cloudinary dashboard → Settings → Security → ensure PDF/ZIP delivery is allowed.'
+    `All download strategies failed for "${resource.title}". ` +
+    `Direct: HTTP ${direct.status}. ` +
+    (signedUrl ? `Signed: tried. ` : 'Signed: no publicId. ') +
+    (apiUrl    ? `API: tried. `    : 'API: no publicId. ') +
+    'Check Cloudinary Settings → Security → "Restricted media types" — ensure PDF is NOT listed.'
   );
 }
 
 /**
- * Fetch a resource's file as a readable stream (for piping to the HTTP response).
- * Same dual-strategy as fetchResourceBuffer but returns a web ReadableStream.
+ * Fetch a resource as a readable stream — tries all 3 strategies.
  */
 export async function fetchResourceStream(resource) {
   if (!resource.fileUrl) throw new Error('Resource has no file URL');
 
   if (!resource.fileUrl.startsWith('http')) {
     const { createReadStream, existsSync, statSync } = await import('fs');
-    if (!existsSync(resource.fileUrl)) {
-      throw new Error('File not found on disk.');
-    }
+    if (!existsSync(resource.fileUrl)) throw new Error('File not found on disk.');
     return { stream: createReadStream(resource.fileUrl), size: statSync(resource.fileUrl).size };
   }
 
-  // Strategy 1: Direct URL
-  console.log(`[fetchStream] Trying direct URL: ${resource.fileUrl}`);
-  let upstream = await fetch(resource.fileUrl);
+  // Try strategies in order
+  const urls = [
+    { url: resource.fileUrl,                 label: 'DirectURL' },
+    { url: buildSignedDeliveryUrl(resource), label: 'SignedDelivery' },
+    { url: buildPrivateDownloadUrl(resource), label: 'PrivateDownload' },
+  ].filter(u => u.url);
 
-  if (!upstream.ok) {
-    console.warn(`[fetchStream] Direct URL failed: HTTP ${upstream.status}`);
-
-    // Strategy 2: Signed URL
-    const signedUrl = buildSignedUrl(resource);
-    if (signedUrl) {
-      console.log(`[fetchStream] Trying signed URL: ${signedUrl}`);
-      upstream = await fetch(signedUrl);
-    }
-
-    if (!upstream.ok) {
-      const status = upstream.status;
-      console.error(`[fetchStream] All strategies failed: HTTP ${status}`);
-      throw new Error(`Failed to fetch file (HTTP ${status})`);
+  for (const { url, label } of urls) {
+    const result = await tryFetch(url, label);
+    if (result.ok) {
+      const len = result.response.headers.get('content-length');
+      return { stream: result.response.body, size: len ? parseInt(len, 10) : null, isWeb: true };
     }
   }
 
-  console.log('[fetchStream] Success');
-  const len = upstream.headers.get('content-length');
-  return { stream: upstream.body, size: len ? parseInt(len, 10) : null, isWeb: true };
+  throw new Error(`Failed to fetch file — all ${urls.length} strategies failed.`);
+}
+
+/**
+ * Get a working download URL for client-side redirect (avoids proxying entirely).
+ * Tests each URL with a HEAD request and returns the first one that responds 200.
+ * Returns null if none work.
+ */
+export async function getWorkingDownloadUrl(resource) {
+  if (!resource.fileUrl || !resource.fileUrl.startsWith('http')) return null;
+
+  const urls = [
+    { url: resource.fileUrl,                 label: 'DirectURL' },
+    { url: buildSignedDeliveryUrl(resource), label: 'SignedDelivery' },
+    { url: buildPrivateDownloadUrl(resource), label: 'PrivateDownload' },
+  ].filter(u => u.url);
+
+  for (const { url, label } of urls) {
+    try {
+      console.log(`[getWorkingUrl] HEAD ${label}: ${url}`);
+      const resp = await fetch(url, { method: 'HEAD' });
+      if (resp.ok) {
+        console.log(`[getWorkingUrl] ${label} works! (${resp.status})`);
+        return url;
+      }
+      console.warn(`[getWorkingUrl] ${label} failed: ${resp.status}`);
+    } catch (err) {
+      console.warn(`[getWorkingUrl] ${label} error: ${err.message}`);
+    }
+  }
+
+  return null;
 }
