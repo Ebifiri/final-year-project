@@ -91,7 +91,8 @@
                 >
                   <div
                     v-if="isNotifOpen"
-                    class="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-slate-200 z-50 overflow-hidden"
+                    class="absolute right-0 sm:right-0 mt-2 w-[calc(100vw-2rem)] xs:w-80 sm:w-96 max-w-[24rem] bg-white rounded-2xl shadow-2xl border border-slate-200 z-50 overflow-hidden"
+                    style="right: -8px;"
                   >
                     <!-- Panel header -->
                     <div class="flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-slate-50">

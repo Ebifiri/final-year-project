@@ -2,14 +2,14 @@
   <div class="flex-1 overflow-y-auto bg-slate-50">
 
     <!-- Page header -->
-    <div class="bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700 text-white px-6 py-10">
+    <div class="bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700 text-white px-4 sm:px-6 py-6 sm:py-10">
       <div class="max-w-4xl mx-auto">
         <div class="flex items-center gap-3 mb-3">
           <div class="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
             <Sparkles class="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 class="text-2xl font-bold">AI Study Assistant</h1>
+            <h1 class="text-xl sm:text-2xl font-bold">AI Study Assistant</h1>
             <p class="text-violet-200 text-sm">Powered by Google Gemini Flash</p>
           </div>
         </div>
@@ -28,7 +28,7 @@
     </div>
 
     <!-- Main content -->
-    <div class="max-w-4xl mx-auto px-4 py-8 space-y-8">
+    <div class="max-w-4xl mx-auto px-3 sm:px-4 py-6 sm:py-8 space-y-6 sm:space-y-8">
 
       <!-- Not logged in -->
       <div v-if="!auth.isLoggedIn" class="text-center py-16">
@@ -49,7 +49,7 @@
           <!-- ── AI CHATBOT SECTION ────────────────────────────────────── -->
           <section class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
             <!-- Chat header -->
-            <div class="flex items-center gap-3 px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-violet-50 to-indigo-50">
+            <div class="flex items-center gap-3 px-3 sm:px-5 py-3 sm:py-4 border-b border-slate-100 bg-gradient-to-r from-violet-50 to-indigo-50">
               <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center flex-shrink-0">
                 <MessageSquare class="w-4 h-4 text-white" />
               </div>
@@ -68,7 +68,7 @@
             </div>
 
             <!-- Messages -->
-            <div ref="chatScrollEl" class="flex flex-col gap-4 px-5 py-5 min-h-[220px] max-h-[420px] overflow-y-auto">
+            <div ref="chatScrollEl" class="flex flex-col gap-3 sm:gap-4 px-3 sm:px-5 py-4 sm:py-5 min-h-[180px] sm:min-h-[220px] max-h-[350px] sm:max-h-[420px] overflow-y-auto">
               <!-- Welcome state -->
               <div v-if="!chatHistory.length" class="flex flex-col items-center justify-center flex-1 py-8 text-center">
                 <div class="w-12 h-12 rounded-2xl bg-violet-50 flex items-center justify-center mb-3">
@@ -102,7 +102,7 @@
                   </div>
                   <div
                     :class="[
-                      'max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed',
+                      'max-w-[85%] sm:max-w-[80%] rounded-2xl px-3 sm:px-4 py-2 sm:py-2.5 text-sm leading-relaxed',
                       msg.role === 'user'
                         ? 'bg-violet-600 text-white rounded-br-sm'
                         : 'bg-slate-100 text-slate-800 rounded-bl-sm'
@@ -137,7 +137,7 @@
             </div>
 
             <!-- Input area -->
-            <div class="px-4 pb-4 pt-2 border-t border-slate-100">
+            <div class="px-3 sm:px-4 pb-3 sm:pb-4 pt-2 border-t border-slate-100">
               <div class="flex gap-2 items-end">
                 <textarea
                   v-model="chatInput"

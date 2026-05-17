@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+/* ── Custom breakpoint for small phones (475px) ──────────── */
+@theme {
+  --breakpoint-xs: 475px;
+}
+
 /* ── Desktop sidebar (width-based slide) ─────────────────── */
 .desktop-sidebar-enter-active {
   transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1),

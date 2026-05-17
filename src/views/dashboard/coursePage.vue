@@ -2,14 +2,14 @@
   <main class="flex-1 bg-slate-50">
 
     <!-- Course Hero Banner -->
-    <div v-if="course" :class="['relative overflow-hidden px-6 lg:px-10 pt-8 pb-8', course.color]">
+    <div v-if="course" :class="['relative overflow-hidden px-4 sm:px-6 lg:px-10 pt-6 sm:pt-8 pb-6 sm:pb-8', course.color]">
       <div class="absolute inset-0 bg-linear-to-br from-black/20 to-black/50"></div>
-      <div class="relative max-w-6xl mx-auto flex items-start justify-between gap-4">
+      <div class="relative max-w-6xl mx-auto flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
         <div>
           <span class="inline-block text-xs font-bold text-white/70 uppercase tracking-widest mb-2">
             {{ course.dept }} &bull; {{ course.year }}
           </span>
-          <h1 class="text-2xl lg:text-3xl font-extrabold text-white leading-snug">
+          <h1 class="text-xl sm:text-2xl lg:text-3xl font-extrabold text-white leading-snug">
             {{ course.code }}: {{ course.title }}
           </h1>
         </div>
@@ -17,7 +17,7 @@
         <!-- Unenroll button (only when enrolled) -->
         <button
           v-if="enrolled"
-          class="flex-shrink-0 flex items-center gap-1.5 px-4 py-2 mt-6 bg-white/15 hover:bg-white/25 text-white text-xs font-bold rounded-xl border border-white/30 transition-colors backdrop-blur-sm"
+          class="flex-shrink-0 self-start flex items-center gap-1.5 px-3 sm:px-4 py-2 mt-0 sm:mt-6 bg-white/15 hover:bg-white/25 text-white text-xs font-bold rounded-xl border border-white/30 transition-colors backdrop-blur-sm"
           :disabled="enrolling"
           @click="handleUnenroll"
         >
@@ -34,7 +34,7 @@
     </div>
 
     <!-- Page body -->
-    <div v-if="course" class="max-w-6xl mx-auto px-6 lg:px-10 py-8 flex flex-col gap-10">
+    <div v-if="course" class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-10 py-6 sm:py-8 flex flex-col gap-8 sm:gap-10">
 
       <!-- ── NOT LOGGED IN GATE ──────────────────────────────────── -->
       <div v-if="!auth.isLoggedIn" class="flex flex-col items-center justify-center py-16 text-center bg-white rounded-2xl border border-slate-200 shadow-sm">
@@ -89,7 +89,7 @@
 
         <template v-else>
           <!-- Toolbar -->
-          <div class="flex items-center justify-between mb-5">
+          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-5">
             <p class="text-sm text-slate-500">
               {{ sections.length }} section{{ sections.length !== 1 ? 's' : '' }}
               &bull;
@@ -119,7 +119,7 @@
           </div>
 
           <!-- Section cards grid -->
-          <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 items-start">
+          <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5 items-start">
             <div
               v-for="sec in sections"
               :key="sec._id"
@@ -175,7 +175,7 @@
                 <div
                   v-for="res in sec.resources"
                   :key="res._id"
-                  :class="['flex items-center gap-2 px-4 py-3 group transition-colors', cart.isSelected(res._id) ? 'bg-blue-50' : 'hover:bg-blue-50']"
+                  :class="['flex items-center gap-2 px-3 sm:px-4 py-3 group transition-colors', cart.isSelected(res._id) ? 'bg-blue-50' : 'hover:bg-blue-50']"
                 >
                   <!-- Select checkbox (downloadable resources only) -->
                   <button
@@ -229,7 +229,7 @@
                     <!-- AI Study button -->
                     <button
                       v-if="canAI(res)"
-                      class="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-violet-100 text-slate-300 hover:text-violet-600 transition-all"
+                      class="sm:opacity-0 sm:group-hover:opacity-100 p-1.5 sm:p-1 rounded hover:bg-violet-100 text-violet-500 sm:text-slate-300 hover:text-violet-600 transition-all"
                       title="AI Study Assistant"
                       @click.stop="openAI(res)"
                     >
@@ -239,7 +239,7 @@
                     <button
                       v-if="isDownloadable(res)"
                       :class="[
-                        'opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-blue-100 transition-all',
+                        'sm:opacity-0 sm:group-hover:opacity-100 p-1.5 sm:p-1 rounded hover:bg-blue-100 transition-all',
                         downloadingId === res._id ? 'text-blue-500 cursor-wait' : 'text-slate-300 hover:text-blue-600'
                       ]"
                       :disabled="downloadingId === res._id"
@@ -252,7 +252,7 @@
                     <!-- Delete resource (lecturer/admin, visible on hover) -->
                     <button
                       v-if="canManage"
-                      class="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-red-50 text-slate-300 hover:text-red-500 transition-all"
+                      class="sm:opacity-0 sm:group-hover:opacity-100 p-1.5 sm:p-1 rounded hover:bg-red-50 text-red-400 sm:text-slate-300 hover:text-red-500 transition-all"
                       title="Delete resource"
                       @click.prevent="confirmDelete('resource', res)"
                     >
@@ -272,7 +272,7 @@
     <Teleport to="body">
       <div
         v-if="showAddSection"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4"
         @click.self="showAddSection = false"
       >
         <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
@@ -317,7 +317,7 @@
     <Teleport to="body">
       <div
         v-if="showAddResource"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4"
         @click.self="showAddResource = false"
       >
         <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
@@ -395,7 +395,7 @@
     <Teleport to="body">
       <div
         v-if="showConfirmDelete"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4"
         @click.self="showConfirmDelete = false"
       >
         <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">

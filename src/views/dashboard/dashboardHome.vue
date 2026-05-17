@@ -11,7 +11,7 @@
     <div v-if="isLecturer" class="flex flex-col gap-8">
 
       <!-- Stats bar -->
-      <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+      <div class="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
         <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex items-center gap-4">
           <div class="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center flex-shrink-0">
             <BookOpen class="w-5 h-5 text-indigo-500" />
@@ -51,7 +51,7 @@
         </div>
 
         <!-- Loading skeleton -->
-        <div v-if="lecturerLoading" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div v-if="lecturerLoading" class="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
           <div v-for="i in 8" :key="i" class="bg-white rounded-xl border border-slate-200 h-36 animate-pulse" />
         </div>
 
@@ -63,7 +63,7 @@
         </div>
 
         <!-- Course grid -->
-        <div v-else class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div v-else class="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
           <RouterLink
             v-for="c in paginatedLecturerCourses"
             :key="c.code"
@@ -130,7 +130,7 @@
               v-for="c in recentCourses"
               :key="c.code"
               :to="'/courses/' + c.code"
-              class="flex-shrink-0 w-56 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden hover:shadow-md hover:border-blue-200 transition-all cursor-pointer"
+              class="flex-shrink-0 w-52 sm:w-56 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden hover:shadow-md hover:border-blue-200 transition-all cursor-pointer"
             >
               <div :class="['h-20 flex items-end p-3', c.color]">
                 <span class="text-xs font-bold text-white/90 bg-black/20 px-2 py-0.5 rounded">{{ c.code }}</span>
@@ -161,7 +161,7 @@
             <RouterLink to="/courses" class="mt-3 px-4 py-2 bg-[#1e293b] text-white text-xs font-bold rounded-lg hover:bg-slate-700 transition-colors">Browse Courses</RouterLink>
           </div>
 
-          <div v-else class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div v-else class="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
             <div
               v-for="c in paginatedCourses"
               :key="c.code"
