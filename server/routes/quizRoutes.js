@@ -4,6 +4,7 @@ import QuizAttempt  from '../models/QuizAttempt.js';
 import Course       from '../models/Course.js';
 import Enrollment   from '../models/Enrollment.js';
 import protect      from '../middleware/auth.js';
+import { notifyEnrolledStudents } from '../utils/notifyEnrolledStudents.js';
 
 const router = express.Router();
 
@@ -59,6 +60,17 @@ router.post('/', protect, async (req, res) => {
       courseId: course._id, title, description, dueDate, durationMinutes,
       questions, createdBy: req.user._id,
     });
+
+    // Notify enrolled students
+    notifyEnrolledStudents({
+      courseId:   course._id,
+      courseCode: course.code,
+      courseName: course.name,
+      type:       'quiz',
+      title:      `New quiz: ${title}`,
+      body:       dueDate ? `Due: ${new Date(dueDate).toLocaleDateString()}` : '',
+    });
+
     res.status(201).json({ quiz });
   } catch (err) {
     res.status(500).json({ message: err.message });

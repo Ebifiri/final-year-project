@@ -5,6 +5,7 @@ import Resource from '../models/Resource.js';
 import protect  from '../middleware/auth.js';
 import upload   from '../middleware/upload.js';
 import { getServerFetchUrl, fetchResourceStream } from '../utils/fileAccess.js';
+import { notifyEnrolledStudents } from '../utils/notifyEnrolledStudents.js';
 
 const router = express.Router();
 
@@ -176,6 +177,20 @@ router.post('/sections/:sectionId/resources',
       }
 
       const resource = await Resource.create(resourceData);
+
+      // ── Notify enrolled students ──────────────────────────────────────────
+      const notifType = type === 'announcement' ? 'announcement' : 'resource';
+      notifyEnrolledStudents({
+        courseId:   section.courseId._id,
+        courseCode: section.courseId.code,
+        courseName: section.courseId.name,
+        type:       notifType,
+        title:      notifType === 'announcement'
+          ? `New announcement: ${title}`
+          : `New ${type}: ${title}`,
+        body:       description || '',
+      });
+
       res.status(201).json({ resource });
     } catch (err) {
       console.error('Resource creation error:', err);

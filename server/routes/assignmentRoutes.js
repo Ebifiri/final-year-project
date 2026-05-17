@@ -4,6 +4,7 @@ import Course      from '../models/Course.js';
 import Submission  from '../models/Submission.js';
 import Enrollment  from '../models/Enrollment.js';
 import protect     from '../middleware/auth.js';
+import { notifyEnrolledStudents } from '../utils/notifyEnrolledStudents.js';
 
 const router = express.Router();
 
@@ -50,6 +51,17 @@ router.post('/', protect, async (req, res) => {
       courseId: course._id, title, description, dueDate, totalPoints,
       createdBy: req.user._id,
     });
+
+    // Notify enrolled students
+    notifyEnrolledStudents({
+      courseId:   course._id,
+      courseCode: course.code,
+      courseName: course.name,
+      type:       'assignment',
+      title:      `New assignment: ${title}`,
+      body:       dueDate ? `Due: ${new Date(dueDate).toLocaleDateString()}` : '',
+    });
+
     res.status(201).json({ assignment });
   } catch (err) {
     res.status(500).json({ message: err.message });

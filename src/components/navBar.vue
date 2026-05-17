@@ -67,13 +67,89 @@
             </div>
 
             <div class="flex items-center gap-2 sm:gap-4 sm:border-l border-slate-700 sm:pl-4">
-              <button v-if="isLoggedIn" class="relative p-2 text-slate-300 hover:bg-slate-800 rounded-full transition-colors">
-                <Bell class="w-5 h-5" />
-                <span class="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-[#1e293b]">3</span>
-              </button>
+              <!-- Notification bell -->
+              <div v-if="isLoggedIn" class="relative" ref="bellRef">
+                <button
+                  class="relative p-2 text-slate-300 hover:bg-slate-800 rounded-full transition-colors"
+                  @click="toggleNotifPanel"
+                >
+                  <Bell class="w-5 h-5" />
+                  <span
+                    v-if="notifStore.unreadCount > 0"
+                    class="absolute top-1 right-1 min-w-[16px] h-4 bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-[#1e293b] px-0.5"
+                  >{{ notifStore.unreadCount > 99 ? '99+' : notifStore.unreadCount }}</span>
+                </button>
+
+                <!-- Notification dropdown panel -->
+                <Transition
+                  enter-active-class="transition-all duration-200 ease-out"
+                  enter-from-class="opacity-0 translate-y-2 scale-95"
+                  enter-to-class="opacity-100 translate-y-0 scale-100"
+                  leave-active-class="transition-all duration-150 ease-in"
+                  leave-from-class="opacity-100 translate-y-0 scale-100"
+                  leave-to-class="opacity-0 translate-y-2 scale-95"
+                >
+                  <div
+                    v-if="isNotifOpen"
+                    class="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-slate-200 z-50 overflow-hidden"
+                  >
+                    <!-- Panel header -->
+                    <div class="flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-slate-50">
+                      <h3 class="text-sm font-bold text-slate-800">Notifications</h3>
+                      <button
+                        v-if="notifStore.unreadCount > 0"
+                        class="text-xs text-violet-600 hover:text-violet-800 font-semibold transition-colors"
+                        @click="handleMarkAllRead"
+                      >
+                        Mark all read
+                      </button>
+                    </div>
+
+                    <!-- Notification list -->
+                    <div class="max-h-80 overflow-y-auto divide-y divide-slate-50">
+                      <div
+                        v-if="!notifStore.loaded"
+                        class="flex items-center justify-center py-8"
+                      >
+                        <div class="w-5 h-5 border-2 border-violet-300 border-t-violet-600 rounded-full animate-spin" />
+                      </div>
+
+                      <div v-else-if="!notifStore.notifications.length" class="py-10 text-center">
+                        <Bell class="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                        <p class="text-sm text-slate-400">No notifications yet</p>
+                      </div>
+
+                      <template v-else>
+                        <button
+                          v-for="n in notifStore.notifications.slice(0, 15)"
+                          :key="n._id"
+                          class="w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-slate-50 transition-colors"
+                          :class="n.read ? 'opacity-60' : ''"
+                          @click="handleNotifClick(n)"
+                        >
+                          <!-- Type icon -->
+                          <div
+                            class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5"
+                            :class="notifIconClass(n.type)"
+                          >
+                            <component :is="notifIcon(n.type)" class="w-4 h-4" />
+                          </div>
+                          <div class="min-w-0 flex-1">
+                            <p class="text-sm font-medium text-slate-800 truncate" :class="{ 'font-bold': !n.read }">{{ n.title }}</p>
+                            <p v-if="n.body" class="text-xs text-slate-500 truncate mt-0.5">{{ n.body }}</p>
+                            <p class="text-[10px] text-slate-400 mt-1">{{ timeAgo(n.createdAt) }}</p>
+                          </div>
+                          <!-- Unread dot -->
+                          <div v-if="!n.read" class="w-2 h-2 rounded-full bg-violet-500 flex-shrink-0 mt-2" />
+                        </button>
+                      </template>
+                    </div>
+                  </div>
+                </Transition>
+              </div>
+
               <button v-if="isLoggedIn" class="relative p-2 text-slate-300 hover:bg-slate-800 rounded-full transition-colors">
                 <Mail class="w-5 h-5" />
-                <span class="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-[#1e293b]">1</span>
               </button>
 
               <!-- Login button (guest only) -->
@@ -120,20 +196,24 @@
 </template>
 
 <script setup>
-import { ref, computed, defineComponent, h } from 'vue';
+import { ref, computed, defineComponent, h, watch, onMounted, onUnmounted } from 'vue';
 import { RouterLink, useRouter } from 'vue-router';
 import {
   Bell, Mail, ChevronDown, ChevronRight, Search, Menu, LogIn,
   LayoutDashboard, Home as HomeIcon,
   Calendar, BookMarked, MonitorPlay, Shield,
   X, Settings, LogOut, Sparkles,
+  FileText, ClipboardList, HelpCircle, Megaphone,
 } from 'lucide-vue-next';
-import { useAuthStore }      from '@/stores/auth.js';
-import { useEnrollmentStore } from '@/stores/enrollments.js';
+import { useAuthStore }         from '@/stores/auth.js';
+import { useEnrollmentStore }   from '@/stores/enrollments.js';
+import { useNotificationStore } from '@/stores/notifications.js';
 
-// ── Auth ─────────────────────────────────────────────────────────────────────
+// ── Auth ───────────────────────────────────────────────────────────────────────
 const auth            = useAuthStore();
 const enrollmentStore = useEnrollmentStore();
+const notifStore      = useNotificationStore();
+const router          = useRouter();
 const isLoggedIn      = computed(() => auth.isLoggedIn);
 const avatarUrl       = computed(() => {
   const name = encodeURIComponent(auth.user?.name || 'User');
@@ -143,15 +223,84 @@ const avatarUrl       = computed(() => {
 function handleLogout() {
   auth.logout();
   enrollmentStore.clear();
+  notifStore.reset();
   router.push('/');
 }
+
+// ── Notification panel ────────────────────────────────────────────────────────
+const isNotifOpen = ref(false);
+const bellRef     = ref(null);
+
+function toggleNotifPanel() {
+  isNotifOpen.value = !isNotifOpen.value;
+  if (isNotifOpen.value && !notifStore.loaded) {
+    notifStore.fetchNotifications();
+  }
+}
+
+function handleNotifClick(n) {
+  if (!n.read) notifStore.markRead(n._id);
+  isNotifOpen.value = false;
+  if (n.link) router.push(n.link);
+}
+
+function handleMarkAllRead() {
+  notifStore.markAllRead();
+}
+
+// Close dropdown when clicking outside
+function onDocClick(e) {
+  if (bellRef.value && !bellRef.value.contains(e.target)) {
+    isNotifOpen.value = false;
+  }
+}
+
+// Notification type helpers
+function notifIcon(type) {
+  const map = { resource: FileText, assignment: ClipboardList, quiz: HelpCircle, announcement: Megaphone };
+  return map[type] || Bell;
+}
+function notifIconClass(type) {
+  const map = {
+    resource:     'bg-blue-50 text-blue-600',
+    assignment:   'bg-amber-50 text-amber-600',
+    quiz:         'bg-emerald-50 text-emerald-600',
+    announcement: 'bg-violet-50 text-violet-600',
+  };
+  return map[type] || 'bg-slate-100 text-slate-500';
+}
+
+function timeAgo(dateStr) {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days < 7) return `${days}d ago`;
+  return new Date(dateStr).toLocaleDateString();
+}
+
+// ── Lifecycle: start/stop polling ───────────────────────────────────────────
+watch(isLoggedIn, (loggedIn) => {
+  if (loggedIn) notifStore.startPolling();
+  else notifStore.reset();
+}, { immediate: true });
+
+onMounted(() => {
+  document.addEventListener('click', onDocClick);
+});
+onUnmounted(() => {
+  document.removeEventListener('click', onDocClick);
+  notifStore.stopPolling();
+});
 
 // ── Reactive state ──────────────────────────────────────────────────────────
 const isSidebarOpen = ref(false);
 const isDesktopSidebarClosed = ref(true);
 
 // ── Navbar search ────────────────────────────────────────────────────────────
-const router    = useRouter();
 const navSearch = ref('');
 function handleNavSearch() {
   const q = navSearch.value.trim();
