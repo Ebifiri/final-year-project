@@ -81,7 +81,7 @@
                   <Sparkles class="w-6 h-6 text-violet-400" />
                 </div>
                 <p class="text-sm font-semibold text-slate-700">Ask me anything about your studies</p>
-                <p class="text-xs text-slate-400 mt-1 max-w-xs">Explain a concept, help with an essay, summarise a topic, or answer a question.</p>
+                <p class="text-xs text-slate-400 mt-1 max-w-xs">Explain a concept, help with an essay, summarise a topic, or upload files to chat about them.</p>
                 <!-- Suggestion chips -->
                 <div class="flex flex-wrap gap-2 mt-4 justify-center">
                   <button
@@ -132,14 +132,14 @@
                     <span class="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style="animation-delay:300ms" />
                   </div>
                 </div>
-
-                <!-- Chat error -->
-                <div v-if="chatError" class="flex gap-2.5 justify-start">
-                  <div class="bg-red-50 border border-red-200 rounded-2xl px-4 py-2.5 text-xs text-red-700 max-w-[80%]">
-                    {{ chatError }}
-                  </div>
-                </div>
               </template>
+
+              <!-- Chat error -->
+              <div v-if="chatError" class="flex gap-2.5 justify-start">
+                <div class="bg-red-50 border border-red-200 rounded-2xl px-4 py-2.5 text-xs text-red-700 max-w-[80%]">
+                  {{ chatError }}
+                </div>
+              </div>
             </div>
 
             <!-- File attachment -->
@@ -195,7 +195,22 @@
                   <Send class="w-4 h-4 text-white" />
                 </button>
               </div>
-              <p class="text-[10px] text-slate-400 mt-1.5 text-right">Enter to send · Drag & drop or 📎 to attach a file</p>
+              <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mt-2 text-[10px] text-slate-400">
+                <div class="flex flex-wrap items-center gap-1.5">
+                  <span class="font-medium text-slate-500">Supported files:</span>
+                  <span class="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded-[4px] text-[9px] font-mono font-medium">PDF</span>
+                  <span class="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded-[4px] text-[9px] font-mono font-medium">DOCX</span>
+                  <span class="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded-[4px] text-[9px] font-mono font-medium">PPTX</span>
+                  <span class="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded-[4px] text-[9px] font-mono font-medium">TXT</span>
+                  <span class="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded-[4px] text-[9px] font-mono font-medium">MD</span>
+                  <span class="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded-[4px] text-[9px] font-mono font-medium">CSV</span>
+                  <span class="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded-[4px] text-[9px] font-mono font-medium">HTML</span>
+                  <span class="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded-[4px] text-[9px] font-mono font-medium">Images</span>
+                </div>
+                <div class="text-right">
+                  Enter to send · Drag & drop or 📎 to attach
+                </div>
+              </div>
             </div>
           </section>
 
@@ -394,16 +409,31 @@ const chatFile    = ref(null);
 const chatDragOver = ref(false);
 const chatFileInput = ref(null);
 
+const ALLOWED_EXTENSIONS = ['.pdf', '.txt', '.md', '.csv', '.html', '.jpg', '.jpeg', '.png', '.gif', '.webp', '.pptx', '.docx'];
+
+function validateAndSetChatFile(file) {
+  if (!file) return;
+  chatError.value = '';
+  const name = file.name.toLowerCase();
+  const isValid = ALLOWED_EXTENSIONS.some(ext => name.endsWith(ext));
+  if (!isValid) {
+    chatError.value = 'Unsupported file type. Please upload a PDF, DOCX, PPTX, TXT, MD, CSV, HTML, or Image (JPG, PNG, GIF, WebP).';
+    chatFile.value = null;
+    return;
+  }
+  chatFile.value = file;
+}
+
 function onChatFileSelect(e) {
   const file = e.target.files[0];
-  if (file) chatFile.value = file;
+  if (file) validateAndSetChatFile(file);
   e.target.value = '';
 }
 
 function onChatDrop(e) {
   chatDragOver.value = false;
   const file = e.dataTransfer.files[0];
-  if (file) chatFile.value = file;
+  if (file) validateAndSetChatFile(file);
 }
 
 function formatFileSize(bytes) {
