@@ -17,6 +17,10 @@ const AI_SUPPORTED = new Set([
   'application/pdf',
   'text/plain', 'text/html', 'text/csv', 'text/markdown',
   'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'application/msword',
+  'application/vnd.ms-powerpoint',
 ]);
 const showCartAI  = ref(false);
 const cartAIItem  = ref(null);

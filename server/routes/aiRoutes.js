@@ -1,11 +1,18 @@
 import express from 'express';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import officeParser from 'officeparser';
 import Resource from '../models/Resource.js';
 import protect  from '../middleware/auth.js';
 import upload   from '../middleware/upload.js';
 import { fetchResourceBuffer } from '../utils/fileAccess.js';
 
 const router = express.Router();
+
+function isOfficeFile(mimeType, filename) {
+  const m = mimeType?.toLowerCase() || '';
+  const f = filename?.toLowerCase() || '';
+  return m.includes('officedocument') || m.includes('ms-word') || m.includes('ms-powerpoint') || f.endsWith('.docx') || f.endsWith('.pptx');
+}
 
 // Supported MIME types Gemini can process directly
 const GEMINI_SUPPORTED = new Set([
@@ -51,8 +58,9 @@ router.post('/analyze', protect, async (req, res) => {
     }
 
     const mimeType = resource.mimeType || 'application/pdf';
+    const isOffice = isOfficeFile(mimeType, resource.title);
 
-    if (!GEMINI_SUPPORTED.has(mimeType)) {
+    if (!GEMINI_SUPPORTED.has(mimeType) && !isOffice) {
       return res.status(422).json({
         message: `File type "${mimeType}" is not supported for AI analysis. Convert to PDF for best results.`,
       });
@@ -69,10 +77,25 @@ router.post('/analyze', protect, async (req, res) => {
     // Call Gemini
     const genAI  = new GoogleGenerativeAI(apiKey);
     const model  = genAI.getGenerativeModel({ model: 'gemini-flash-latest' });
-    const result = await model.generateContent([
-      { inlineData: { mimeType, data: fileBuffer.toString('base64') } },
-      PROMPTS[action],
-    ]);
+
+    let result;
+    if (isOffice) {
+      try {
+        const textContent = await officeParser.parseOffice(fileBuffer);
+        result = await model.generateContent([
+          { text: `Here is the text content extracted from the document "${resource.title}":\n\n${textContent}` },
+          PROMPTS[action],
+        ]);
+      } catch (parseErr) {
+        console.error('Office parsing error:', parseErr);
+        return res.status(500).json({ message: 'Failed to parse Office file text: ' + parseErr.message });
+      }
+    } else {
+      result = await model.generateContent([
+        { inlineData: { mimeType, data: fileBuffer.toString('base64') } },
+        PROMPTS[action],
+      ]);
+    }
 
     const text = result.response.text();
 
@@ -135,7 +158,17 @@ router.post('/chat', protect, upload.single('file'), async (req, res) => {
         const resp = await fetch(fileUrl);
         if (resp.ok) {
           const buffer = Buffer.from(await resp.arrayBuffer());
-          parts.push({ inlineData: { mimeType, data: buffer.toString('base64') } });
+          if (isOfficeFile(mimeType, req.file.originalname)) {
+            try {
+              const textContent = await officeParser.parseOffice(buffer);
+              parts.push({ text: `The user uploaded a document named "${req.file.originalname}". Here is its extracted text content:\n---\n${textContent}\n---\n` });
+            } catch (parseErr) {
+              console.warn('[ai/chat] Failed to parse uploaded Office file:', parseErr.message);
+              parts.push({ text: `The user uploaded a document named "${req.file.originalname}" but text extraction failed.` });
+            }
+          } else {
+            parts.push({ inlineData: { mimeType, data: buffer.toString('base64') } });
+          }
         }
       } catch (e) {
         console.warn('[ai/chat] Failed to fetch uploaded file:', e.message);
@@ -181,7 +214,7 @@ router.post('/generate-quiz', protect, upload.array('files', 10), async (req, re
       return res.status(503).json({ message: 'AI service not configured' });
     }
 
-    // Build inline data parts for all uploaded files
+    // Build parts for all uploaded files (inlineData for natively supported types, text content for Office files)
     const fileParts = [];
     for (const file of req.files) {
       const fileUrl = file.path; // Cloudinary URL
@@ -190,7 +223,16 @@ router.post('/generate-quiz', protect, upload.array('files', 10), async (req, re
         const resp = await fetch(fileUrl);
         if (resp.ok) {
           const buffer = Buffer.from(await resp.arrayBuffer());
-          fileParts.push({ inlineData: { mimeType, data: buffer.toString('base64') } });
+          if (isOfficeFile(mimeType, file.originalname)) {
+            try {
+              const textContent = await officeParser.parseOffice(buffer);
+              fileParts.push({ text: `Study material document (name: "${file.originalname}") text content:\n---\n${textContent}\n---\n` });
+            } catch (parseErr) {
+              console.warn(`[generate-quiz] Failed to parse Office file ${file.originalname}:`, parseErr.message);
+            }
+          } else {
+            fileParts.push({ inlineData: { mimeType, data: buffer.toString('base64') } });
+          }
         }
       } catch (e) {
         console.warn(`[generate-quiz] Failed to fetch file ${file.originalname}:`, e.message);
