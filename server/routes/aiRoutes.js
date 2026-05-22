@@ -16,16 +16,14 @@ const GEMINI_SUPPORTED = new Set([
 
 const PROMPTS = {
   summary: `You are a helpful academic assistant. Provide a clear, well-structured summary of this document.
-Include the main topics, key arguments, and important conclusions.
+Include the main topics, key arguments, important conclusions, and key takeaways.
+Highlight critical concepts and terms.
 Use markdown formatting with headings, bullet points, and bold text where appropriate.`,
 
   quiz: `You are a helpful academic assistant. Generate 8 multiple-choice quiz questions based on this material.
 Return ONLY a valid JSON array — no explanation, no markdown code fences, just the raw JSON array:
 [{"question":"...","choices":["A. ...","B. ...","C. ...","D. ..."],"correct":0,"explanation":"..."}]
 Where "correct" is the 0-based index of the correct answer.`,
-
-  keypoints: `You are a helpful academic assistant. Extract the key points, important concepts, and main takeaways from this material.
-Organise them clearly using markdown: headings for topics, bullet points for details, and **bold** for critical terms.`,
 
   flashcards: `You are a helpful academic assistant. Create 10 study flashcards from this material.
 Return ONLY a valid JSON array — no explanation, no markdown code fences, just the raw JSON array:

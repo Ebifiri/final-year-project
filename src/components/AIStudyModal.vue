@@ -75,8 +75,8 @@
               <p>{{ error }}</p>
             </div>
 
-            <!-- Summary / Key Points (markdown text) -->
-            <div v-else-if="result && (action === 'summary' || action === 'keypoints')"
+            <!-- Summary (markdown text) -->
+            <div v-else-if="result && action === 'summary'"
               class="prose prose-sm max-w-none text-slate-700"
               v-html="renderedMarkdown"
             />
@@ -155,7 +155,7 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue';
-import { Sparkles, X, FileText, ListChecks, Layers, BookOpen, Copy } from 'lucide-vue-next';
+import { Sparkles, X, FileText, Layers, BookOpen, Copy } from 'lucide-vue-next';
 import { api } from '@/api/client.js';
 
 const props  = defineProps({ modelValue: Boolean, resource: Object, initialAction: { type: String, default: '' } });
@@ -163,7 +163,6 @@ const emit   = defineEmits(['update:modelValue']);
 
 const ACTIONS = [
   { id: 'summary',    label: 'Summary',    icon: FileText   },
-  { id: 'keypoints',  label: 'Key Points', icon: ListChecks },
   { id: 'quiz',       label: 'Quiz',       icon: Layers     },
   { id: 'flashcards', label: 'Flashcards', icon: BookOpen   },
 ];
