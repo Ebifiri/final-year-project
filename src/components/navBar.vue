@@ -99,7 +99,7 @@
                       <h3 class="text-sm font-bold text-slate-800">Notifications</h3>
                       <button
                         v-if="notifStore.unreadCount > 0"
-                        class="text-xs text-violet-600 hover:text-violet-800 font-semibold transition-colors"
+                        class="text-xs text-blue-600 hover:text-blue-800 font-semibold transition-colors cursor-pointer"
                         @click="handleMarkAllRead"
                       >
                         Mark all read
@@ -112,7 +112,7 @@
                         v-if="!notifStore.loaded"
                         class="flex items-center justify-center py-8"
                       >
-                        <div class="w-5 h-5 border-2 border-violet-300 border-t-violet-600 rounded-full animate-spin" />
+                        <div class="w-5 h-5 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin" />
                       </div>
 
                       <div v-else-if="!notifStore.notifications.length" class="py-10 text-center">
@@ -141,7 +141,7 @@
                             <p class="text-[10px] text-slate-400 mt-1">{{ timeAgo(n.createdAt) }}</p>
                           </div>
                           <!-- Unread dot -->
-                          <div v-if="!n.read" class="w-2 h-2 rounded-full bg-violet-500 flex-shrink-0 mt-2" />
+                          <div v-if="!n.read" class="w-2 h-2 rounded-full bg-blue-600 flex-shrink-0 mt-2" />
                         </button>
                       </template>
                     </div>
@@ -454,7 +454,7 @@ const SidebarContents = defineComponent({
                   h(RouterLink, { to: '/',                onClick: props.onClose, class: 'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all' }, () => [h(HomeIcon,        { class: 'w-5 h-5 text-slate-400' }), h('span', 'Site home')]),
                   h(RouterLink, { to: '/dashboard/home', onClick: props.onClose, class: 'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all' }, () => [h(LayoutDashboard, { class: 'w-5 h-5 text-slate-400' }), h('span', 'Dashboard')]),
                   h(RouterLink, { to: '/courses',        onClick: props.onClose, class: 'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all' }, () => [h(BookMarked,      { class: 'w-5 h-5 text-slate-400' }), h('span', 'All courses')]),
-                  h(RouterLink, { to: '/dashboard/ai',  onClick: props.onClose, class: 'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all' }, () => [h(Sparkles,       { class: 'w-5 h-5 text-violet-400' }), h('span', 'AI Study Assistant')]),
+                  h(RouterLink, { to: '/dashboard/ai',  onClick: props.onClose, class: 'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all cursor-pointer' }, () => [h(Sparkles,       { class: 'w-5 h-5 text-blue-500' }), h('span', 'AI Study Assistant')]),
                 ]),
                 // My enrolled courses
                 h('div', { class: 'px-3 mb-2' }, [

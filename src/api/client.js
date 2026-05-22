@@ -32,9 +32,9 @@ async function request(path, options = {}) {
 }
 
 export const api = {
-  get:      (path)         => request(path),
-  post:     (path, body)   => request(path, { method: 'POST',   body: JSON.stringify(body) }),
-  postForm: (path, form)   => request(path, { method: 'POST',   body: form }),   // FormData
-  patch:    (path, body)   => request(path, { method: 'PATCH',  body: JSON.stringify(body) }),
-  delete:   (path)         => request(path, { method: 'DELETE' }),
+  get:      (path, options)         => request(path, options),
+  post:     (path, body, options)   => request(path, { method: 'POST',   body: JSON.stringify(body), ...options }),
+  postForm: (path, form, options)   => request(path, { method: 'POST',   body: form, ...options }),   // FormData
+  patch:    (path, body, options)   => request(path, { method: 'PATCH',  body: JSON.stringify(body), ...options }),
+  delete:   (path, options)         => request(path, { method: 'DELETE', ...options }),
 };

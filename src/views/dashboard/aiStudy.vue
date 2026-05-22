@@ -2,7 +2,7 @@
   <div class="flex-1 overflow-y-auto bg-slate-50">
 
     <!-- Page header -->
-    <div class="bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700 text-white px-4 sm:px-6 py-6 sm:py-10">
+    <div class="bg-gradient-to-r from-blue-600 via-violet-600 to-pink-500 text-white px-4 sm:px-6 py-6 sm:py-10 shadow-sm">
       <div class="max-w-4xl mx-auto">
         <div class="flex items-center gap-3 mb-3">
           <div class="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
@@ -10,10 +10,10 @@
           </div>
           <div>
             <h1 class="text-xl sm:text-2xl font-bold">AI Study Assistant</h1>
-            <p class="text-violet-200 text-sm">Powered by Google Gemini Flash</p>
+            <p class="text-blue-100 text-sm font-medium">Powered by Google Gemini Flash</p>
           </div>
         </div>
-        <p class="text-violet-100 text-sm max-w-xl mt-2">
+        <p class="text-slate-100 text-sm max-w-xl mt-2">
           Analyse your course materials or ask the AI anything in the chat below.
         </p>
         <!-- Capability chips -->
@@ -32,9 +32,9 @@
 
       <!-- Not logged in -->
       <div v-if="!auth.isLoggedIn" class="text-center py-16">
-        <Sparkles class="w-12 h-12 text-violet-300 mx-auto mb-4" />
+        <Sparkles class="w-12 h-12 text-blue-300 mx-auto mb-4" />
         <p class="text-slate-700 font-semibold mb-2">Log in to use AI Study Assistant</p>
-        <RouterLink to="/login" class="inline-flex items-center gap-2 px-5 py-2.5 bg-violet-600 hover:bg-violet-700 text-white text-sm font-bold rounded-xl transition-colors">
+        <RouterLink to="/login" class="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-500 hover:opacity-90 text-white text-sm font-bold rounded-xl transition-opacity">
           Log in
         </RouterLink>
       </div>
@@ -42,7 +42,7 @@
       <template v-else>
         <!-- Loading enrollments -->
         <div v-if="loading" class="flex items-center justify-center py-16">
-          <div class="w-8 h-8 border-4 border-violet-200 border-t-violet-600 rounded-full animate-spin" />
+          <div class="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
         </div>
 
         <template v-else>
@@ -55,8 +55,8 @@
             @drop.prevent="onChatDrop"
           >
             <!-- Chat header -->
-            <div class="flex items-center gap-3 px-3 sm:px-5 py-3 sm:py-4 border-b border-slate-100 bg-gradient-to-r from-violet-50 to-indigo-50">
-              <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center flex-shrink-0">
+            <div class="flex items-center gap-3 px-3 sm:px-5 py-3 sm:py-4 border-b border-slate-100 bg-gradient-to-r from-blue-50/50 via-purple-50/50 to-pink-50/50">
+              <div class="w-8 h-8 rounded-xl bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0">
                 <MessageSquare class="w-4 h-4 text-white" />
               </div>
               <div>
@@ -77,8 +77,8 @@
             <div ref="chatScrollEl" class="flex flex-col gap-3 sm:gap-4 px-3 sm:px-5 py-4 sm:py-5 min-h-[180px] sm:min-h-[220px] max-h-[350px] sm:max-h-[420px] overflow-y-auto">
               <!-- Welcome state -->
               <div v-if="!chatHistory.length" class="flex flex-col items-center justify-center flex-1 py-8 text-center">
-                <div class="w-12 h-12 rounded-2xl bg-violet-50 flex items-center justify-center mb-3">
-                  <Sparkles class="w-6 h-6 text-violet-400" />
+                <div class="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center mb-3">
+                  <Sparkles class="w-6 h-6 text-blue-400" />
                 </div>
                 <p class="text-sm font-semibold text-slate-700">Ask me anything about your studies</p>
                 <p class="text-xs text-slate-400 mt-1 max-w-xs">Explain a concept, help with an essay, summarise a topic, or upload files to chat about them.</p>
@@ -87,7 +87,7 @@
                   <button
                     v-for="s in SUGGESTIONS"
                     :key="s"
-                    class="text-xs px-3 py-1.5 rounded-full border border-violet-200 text-violet-700 bg-violet-50 hover:bg-violet-100 transition-colors"
+                    class="text-xs px-3 py-1.5 rounded-full border border-blue-200 text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors"
                     @click="sendSuggestion(s)"
                   >
                     {{ s }}
@@ -103,14 +103,14 @@
                   :class="['flex gap-2.5', msg.role === 'user' ? 'justify-end' : 'justify-start']"
                 >
                   <!-- AI avatar -->
-                  <div v-if="msg.role === 'model'" class="w-7 h-7 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <div v-if="msg.role === 'model'" class="w-7 h-7 rounded-xl bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0 mt-0.5">
                     <Sparkles class="w-3.5 h-3.5 text-white" />
                   </div>
                   <div
                     :class="[
                       'max-w-[85%] sm:max-w-[80%] rounded-2xl px-3 sm:px-4 py-2 sm:py-2.5 text-sm leading-relaxed',
                       msg.role === 'user'
-                        ? 'bg-violet-600 text-white rounded-br-sm'
+                        ? 'bg-blue-600 text-white rounded-br-sm'
                         : 'bg-slate-100 text-slate-800 rounded-bl-sm'
                     ]"
                     v-html="msg.role === 'model' ? renderMarkdown(msg.text) : escapeHtml(msg.text)"
@@ -123,7 +123,7 @@
 
                 <!-- Typing indicator -->
                 <div v-if="chatLoading" class="flex gap-2.5 justify-start">
-                  <div class="w-7 h-7 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center flex-shrink-0">
+                  <div class="w-7 h-7 rounded-xl bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0">
                     <Sparkles class="w-3.5 h-3.5 text-white" />
                   </div>
                   <div class="bg-slate-100 rounded-2xl rounded-bl-sm px-4 py-3 flex gap-1 items-center">
@@ -144,11 +144,11 @@
 
             <!-- File attachment -->
             <div v-if="chatFile" class="px-3 sm:px-4 pt-2 border-t border-slate-100">
-              <div class="flex items-center gap-2 px-3 py-2 bg-violet-50 rounded-xl text-xs">
-                <Paperclip class="w-3.5 h-3.5 text-violet-500 flex-shrink-0" />
-                <span class="truncate text-violet-800 font-medium">{{ chatFile.name }}</span>
-                <span class="text-violet-400 flex-shrink-0">{{ formatFileSize(chatFile.size) }}</span>
-                <button class="ml-auto p-0.5 rounded hover:bg-violet-100 text-violet-400 hover:text-red-500 transition-colors" @click="chatFile = null">
+              <div class="flex items-center gap-2 px-3 py-2 bg-blue-50 rounded-xl text-xs">
+                <Paperclip class="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+                <span class="truncate text-blue-800 font-medium">{{ chatFile.name }}</span>
+                <span class="text-blue-400 flex-shrink-0">{{ formatFileSize(chatFile.size) }}</span>
+                <button class="ml-auto p-0.5 rounded hover:bg-blue-100 text-blue-400 hover:text-red-500 transition-colors" @click="chatFile = null">
                   <X class="w-3 h-3" />
                 </button>
               </div>
@@ -157,16 +157,16 @@
             <!-- Drop overlay -->
             <div
               v-if="chatDragOver"
-              class="absolute inset-0 bg-violet-500/10 backdrop-blur-[2px] z-10 flex items-center justify-center rounded-2xl pointer-events-none"
+              class="absolute inset-0 bg-blue-500/10 backdrop-blur-[2px] z-10 flex items-center justify-center rounded-2xl pointer-events-none"
             >
-              <p class="text-sm font-bold text-violet-700">Drop file here</p>
+              <p class="text-sm font-bold text-blue-700">Drop file here</p>
             </div>
 
             <!-- Input area -->
             <div class="px-3 sm:px-4 pb-3 sm:pb-4 pt-2" :class="{ 'border-t border-slate-100': !chatFile }">
               <div class="flex gap-2 items-end">
                 <button
-                  class="flex-shrink-0 w-10 h-10 rounded-xl border border-slate-200 hover:bg-violet-50 hover:border-violet-300 flex items-center justify-center transition-colors"
+                  class="flex-shrink-0 w-10 h-10 rounded-xl border border-slate-200 hover:bg-blue-50 hover:border-blue-300 flex items-center justify-center transition-colors"
                   title="Attach a file"
                   @click="$refs.chatFileInput.click()"
                 >
@@ -182,14 +182,22 @@
                 <textarea
                   v-model="chatInput"
                   rows="2"
-                  class="flex-1 resize-none border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400 text-slate-800 placeholder:text-slate-400"
+                  class="flex-1 resize-none border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 text-slate-800 placeholder:text-slate-400"
                   :placeholder="chatFile ? 'Ask about this file…' : 'Ask a study question…'"
-                  :disabled="chatLoading"
                   @keydown.enter.exact.prevent="sendChat"
                 />
                 <button
-                  class="flex-shrink-0 w-10 h-10 rounded-xl bg-violet-600 hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
-                  :disabled="chatLoading || !chatInput.trim()"
+                  v-if="chatLoading"
+                  class="flex-shrink-0 w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-900 flex items-center justify-center active:scale-95 transition-all"
+                  title="Stop generating"
+                  @click="stopChat"
+                >
+                  <Square class="w-3.5 h-3.5 text-white fill-current animate-pulse" />
+                </button>
+                <button
+                  v-else
+                  class="flex-shrink-0 w-10 h-10 rounded-xl bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 hover:opacity-90 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-all"
+                  :disabled="!chatInput.trim() && !chatFile"
                   @click="sendChat"
                 >
                   <Send class="w-4 h-4 text-white" />
@@ -222,7 +230,7 @@
             <div v-if="!enrollments.length" class="text-center py-12 bg-white rounded-2xl border border-slate-200">
               <BookOpen class="w-12 h-12 text-slate-300 mx-auto mb-4" />
               <p class="text-slate-600 font-semibold">You're not enrolled in any courses yet</p>
-              <RouterLink to="/courses" class="mt-3 inline-flex items-center gap-2 text-sm text-violet-600 hover:underline font-medium">
+              <RouterLink to="/courses" class="mt-3 inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 hover:underline font-medium cursor-pointer">
                 Browse courses →
               </RouterLink>
             </div>
@@ -237,8 +245,8 @@
                   @click="toggleCourse(enroll.course?._id)"
                 >
                   <div class="flex items-center gap-3">
-                    <div class="w-9 h-9 rounded-xl bg-violet-100 flex items-center justify-center">
-                      <BookOpen class="w-5 h-5 text-violet-600" />
+                    <div class="w-9 h-9 rounded-xl bg-blue-100 flex items-center justify-center">
+                      <BookOpen class="w-5 h-5 text-blue-600" />
                     </div>
                     <div class="text-left">
                       <p class="font-semibold text-slate-900 text-sm">{{ enroll.course?.name }}</p>
@@ -247,9 +255,9 @@
                   </div>
                   <div class="flex items-center gap-2">
                     <span v-if="courseContent[enroll.course?._id]?.loading"
-                      class="w-4 h-4 border-2 border-violet-400 border-t-violet-600 rounded-full animate-spin" />
+                      class="w-4 h-4 border-2 border-blue-400 border-t-blue-600 rounded-full animate-spin" />
                     <span v-else-if="aiResourceCount(enroll.course?._id) > 0"
-                      class="text-xs font-medium text-violet-600 bg-violet-50 px-2 py-0.5 rounded-full">
+                      class="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
                       {{ aiResourceCount(enroll.course?._id) }} file{{ aiResourceCount(enroll.course?._id) !== 1 ? 's' : '' }}
                     </span>
                     <ChevronDown
@@ -276,7 +284,7 @@
                       <div
                         v-for="res in aiResources(enroll.course?._id)"
                         :key="res._id"
-                        class="flex items-center justify-between px-5 py-3 hover:bg-violet-50/50 transition-colors group"
+                        class="flex items-center justify-between px-5 py-3 hover:bg-blue-50/50 transition-colors group"
                       >
                         <div class="flex items-center gap-3 min-w-0">
                           <div class="w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0">
@@ -301,7 +309,7 @@
                           </button>
                           <!-- Always-visible sparkle for mobile -->
                           <button
-                            class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold border border-violet-300 text-violet-700 bg-violet-50 hover:bg-violet-100 transition-all sm:hidden"
+                            class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold border border-blue-300 text-blue-700 bg-blue-50 hover:bg-blue-100 transition-all sm:hidden"
                             @click="openAI(res, 'summary')"
                           >
                             <Sparkles class="w-3 h-3" />
@@ -328,7 +336,7 @@
 import { ref, reactive, computed, onMounted, nextTick } from 'vue';
 import { RouterLink } from 'vue-router';
 import {
-  Sparkles, BookOpen, FileText, ChevronDown, Send, MessageSquare, Trash2, Paperclip, X,
+  Sparkles, BookOpen, FileText, ChevronDown, Send, MessageSquare, Trash2, Paperclip, X, Square,
   FileText as SummaryIcon, Layers, BookOpen as FlashIcon,
 } from 'lucide-vue-next';
 import AIStudyModal from '@/components/AIStudyModal.vue';
@@ -412,6 +420,13 @@ const chatScrollEl = ref(null);
 const chatFile    = ref(null);
 const chatDragOver = ref(false);
 const chatFileInput = ref(null);
+const chatAbortController = ref(null);
+
+function stopChat() {
+  if (chatAbortController.value) {
+    chatAbortController.value.abort();
+  }
+}
 
 const ALLOWED_EXTENSIONS = ['.pdf', '.txt', '.md', '.csv', '.html', '.jpg', '.jpeg', '.png', '.gif', '.webp', '.pptx', '.docx'];
 
@@ -467,6 +482,7 @@ async function sendChat() {
   await scrollToBottom();
 
   chatLoading.value = true;
+  chatAbortController.value = new AbortController();
   try {
     const historyForApi = chatHistory.value.slice(0, -1);
     let data;
@@ -477,18 +493,23 @@ async function sendChat() {
       fd.append('message', text);
       fd.append('history', JSON.stringify(historyForApi));
       fd.append('file', chatFile.value);
-      data = await api.postForm('/api/ai/chat', fd);
+      data = await api.postForm('/api/ai/chat', fd, { signal: chatAbortController.value.signal });
       chatFile.value = null; // clear file after sending
     } else {
-      data = await api.post('/api/ai/chat', { message: text, history: historyForApi });
+      data = await api.post('/api/ai/chat', { message: text, history: historyForApi }, { signal: chatAbortController.value.signal });
     }
 
     chatHistory.value = [...chatHistory.value, { role: 'model', text: data.reply }];
     await scrollToBottom();
   } catch (e) {
-    chatError.value = e.message || 'Something went wrong. Please try again.';
+    if (e.name === 'AbortError') {
+      chatError.value = 'Generation stopped by user.';
+    } else {
+      chatError.value = e.message || 'Something went wrong. Please try again.';
+    }
   } finally {
     chatLoading.value = false;
+    chatAbortController.value = null;
   }
 }
 
@@ -532,9 +553,9 @@ const CAPABILITIES = [
 ];
 
 const ACTIONS = [
-  { id: 'summary',    label: 'Summarise', icon: SummaryIcon, cls: 'border-slate-200 text-slate-600 hover:border-violet-400 hover:text-violet-700 hover:bg-violet-50 bg-white' },
-  { id: 'quiz',       label: 'Quiz',      icon: Layers,      cls: 'border-slate-200 text-slate-600 hover:border-violet-400 hover:text-violet-700 hover:bg-violet-50 bg-white' },
-  { id: 'flashcards', label: 'Flashcards',icon: FlashIcon,   cls: 'border-slate-200 text-slate-600 hover:border-violet-400 hover:text-violet-700 hover:bg-violet-50 bg-white' },
+  { id: 'summary',    label: 'Summarise', icon: SummaryIcon, cls: 'border-slate-200 text-slate-600 hover:border-blue-400 hover:text-blue-700 hover:bg-blue-50 bg-white' },
+  { id: 'quiz',       label: 'Quiz',      icon: Layers,      cls: 'border-slate-200 text-slate-600 hover:border-blue-400 hover:text-blue-700 hover:bg-blue-50 bg-white' },
+  { id: 'flashcards', label: 'Flashcards',icon: FlashIcon,   cls: 'border-slate-200 text-slate-600 hover:border-blue-400 hover:text-blue-700 hover:bg-blue-50 bg-white' },
 ];
 
 const SUGGESTIONS = [

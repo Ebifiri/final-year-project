@@ -202,7 +202,7 @@ async function downloadAll() {
           <!-- AI Study (only when compatible items are in cart) -->
           <button
             v-if="firstAiItem"
-            class="flex items-center gap-1.5 px-3 py-1.5 bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold rounded-xl transition-colors flex-shrink-0"
+            class="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-500 hover:opacity-90 text-white text-xs font-bold rounded-xl transition-all flex-shrink-0 cursor-pointer shadow-md shadow-purple-500/10"
             :title="'AI Study: ' + firstAiItem.title"
             @click="openCartAI"
           >

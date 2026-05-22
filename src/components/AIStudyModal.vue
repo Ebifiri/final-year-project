@@ -17,7 +17,7 @@
 
           <!-- Header -->
           <div class="flex items-center gap-3 px-5 py-4 border-b border-slate-100 flex-shrink-0">
-            <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
+            <div class="w-9 h-9 rounded-xl bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 flex items-center justify-center">
               <Sparkles class="w-5 h-5 text-white" />
             </div>
             <div class="flex-1 min-w-0">
@@ -37,10 +37,10 @@
             <button
               v-for="act in ACTIONS" :key="act.id"
               :class="[
-                'flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all border',
+                'flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all border cursor-pointer',
                 action === act.id
-                  ? 'bg-violet-600 text-white border-violet-600 shadow-sm'
-                  : 'bg-white text-slate-600 border-slate-200 hover:border-violet-400 hover:text-violet-600'
+                  ? 'bg-gradient-to-r from-blue-600 via-purple-600 to-pink-500 text-white border-transparent shadow-sm'
+                  : 'bg-white text-slate-600 border-slate-200 hover:border-blue-400 hover:text-blue-600'
               ]"
               :disabled="loading"
               @click="run(act.id)"
@@ -55,8 +55,8 @@
 
             <!-- Idle -->
             <div v-if="!action && !result && !loading" class="flex flex-col items-center justify-center py-12 text-center">
-              <div class="w-14 h-14 rounded-2xl bg-violet-50 flex items-center justify-center mb-3">
-                <Sparkles class="w-7 h-7 text-violet-400" />
+              <div class="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center mb-3">
+                <Sparkles class="w-7 h-7 text-blue-500" />
               </div>
               <p class="text-sm font-semibold text-slate-700">What would you like to generate?</p>
               <p class="text-xs text-slate-400 mt-1">Choose an action above to analyse this material.</p>
@@ -64,7 +64,7 @@
 
             <!-- Loading -->
             <div v-else-if="loading" class="flex flex-col items-center justify-center py-12">
-              <div class="w-10 h-10 rounded-full border-4 border-violet-200 border-t-violet-600 animate-spin mb-4" />
+              <div class="w-10 h-10 rounded-full border-4 border-blue-100 border-t-blue-600 animate-spin mb-4" />
               <p class="text-sm text-slate-500">Analysing with Gemini AI…</p>
               <p class="text-xs text-slate-400 mt-1">This may take a few seconds</p>
             </div>
@@ -99,7 +99,7 @@
                 </div>
                 <div class="mt-2 flex items-center justify-between">
                   <button
-                    class="text-xs text-violet-600 hover:underline font-medium"
+                    class="text-xs text-blue-600 hover:underline font-medium cursor-pointer"
                     @click="reveal(i)"
                   >{{ revealed.has(i) ? 'Hide answer' : 'Show answer' }}</button>
                   <p v-if="revealed.has(i)" class="text-xs text-slate-500 italic max-w-xs text-right">{{ q.explanation }}</p>
@@ -119,8 +119,8 @@
                   <!-- Front -->
                   <div :class="['absolute inset-0 rounded-xl border-2 p-3 flex items-center justify-center text-center transition-all duration-300',
                     flipped.has(i) ? 'opacity-0 pointer-events-none' : 'opacity-100',
-                    'bg-violet-50 border-violet-200']">
-                    <p class="text-xs font-semibold text-violet-900">{{ card.front }}</p>
+                    'bg-blue-50/60 border-blue-200']">
+                    <p class="text-xs font-semibold text-blue-900">{{ card.front }}</p>
                   </div>
                   <!-- Back -->
                   <div :class="['absolute inset-0 rounded-xl border-2 p-3 flex items-center justify-center text-center transition-all duration-300',
