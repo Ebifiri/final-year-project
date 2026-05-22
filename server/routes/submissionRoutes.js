@@ -14,6 +14,15 @@ router.post('/', protect, upload.array('files', 20), async (req, res) => {
     const assignment = await Assignment.findById(assignmentId);
     if (!assignment) return res.status(404).json({ message: 'Assignment not found' });
 
+    // Check portal open/close dates
+    const now = new Date();
+    if (assignment.opensAt && now < new Date(assignment.opensAt)) {
+      return res.status(403).json({ message: 'Submissions not open yet' });
+    }
+    if (assignment.closesAt && now > new Date(assignment.closesAt)) {
+      return res.status(403).json({ message: 'Submissions are closed' });
+    }
+
     // Verify enrollment
     const enrolled = await Enrollment.findOne({
       student: req.user._id, course: assignment.courseId,
@@ -45,6 +54,18 @@ router.post('/', protect, upload.array('files', 20), async (req, res) => {
     }
 
     res.status(201).json({ submission });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// ── GET /api/submissions/assignment/:assignmentId/mine  — student's submission ─
+router.get('/assignment/:assignmentId/mine', protect, async (req, res) => {
+  try {
+    const submission = await Submission.findOne({
+      assignmentId: req.params.assignmentId, studentId: req.user._id,
+    });
+    res.json({ submission: submission || null });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

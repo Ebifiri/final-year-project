@@ -52,12 +52,13 @@ router.post('/', protect, async (req, res) => {
     if (!['lecturer', 'admin'].includes(req.user.role)) {
       return res.status(403).json({ message: 'Not authorised' });
     }
-    const { courseCode, title, description, dueDate, durationMinutes, questions } = req.body;
+    const { courseCode, title, description, dueDate, durationMinutes, questions, opensAt, closesAt } = req.body;
     const course = await Course.findOne({ code: courseCode?.toUpperCase() });
     if (!course) return res.status(404).json({ message: 'Course not found' });
 
     const quiz = await Quiz.create({
       courseId: course._id, title, description, dueDate, durationMinutes,
+      opensAt: opensAt || undefined, closesAt: closesAt || undefined,
       questions, createdBy: req.user._id,
     });
 

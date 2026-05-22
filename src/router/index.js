@@ -54,6 +54,12 @@ const router = createRouter({
       component: aiStudy,
       meta: { requiresAuth: true },
     },
+    {
+      path: '/assignments/:assignmentId/submit',
+      name: 'submitAssignment',
+      component: () => import('@/views/dashboard/assignmentSubmission.vue'),
+      meta: { requiresAuth: true },
+    },
   ],
 })
 

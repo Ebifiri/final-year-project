@@ -14,6 +14,8 @@ const quizSchema = new mongoose.Schema(
     title:           { type: String, required: true, trim: true },
     description:     { type: String, default: '' },
     dueDate:         Date,
+    opensAt:         Date,
+    closesAt:        Date,
     durationMinutes: { type: Number, default: 20 },
     questions:       [questionSchema],
     createdBy:       { type: mongoose.Schema.Types.ObjectId, ref: 'User' },

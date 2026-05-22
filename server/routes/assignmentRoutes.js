@@ -43,12 +43,13 @@ router.post('/', protect, async (req, res) => {
     if (!['lecturer', 'admin'].includes(req.user.role)) {
       return res.status(403).json({ message: 'Not authorised' });
     }
-    const { courseCode, title, description, dueDate, totalPoints } = req.body;
+    const { courseCode, title, description, dueDate, totalPoints, opensAt, closesAt } = req.body;
     const course = await Course.findOne({ code: courseCode?.toUpperCase() });
     if (!course) return res.status(404).json({ message: 'Course not found' });
 
     const assignment = await Assignment.create({
       courseId: course._id, title, description, dueDate, totalPoints,
+      opensAt: opensAt || undefined, closesAt: closesAt || undefined,
       createdBy: req.user._id,
     });
 

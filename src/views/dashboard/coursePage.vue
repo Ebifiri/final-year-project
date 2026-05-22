@@ -224,8 +224,13 @@
 
                   <!-- Right-side actions -->
                   <div class="flex items-center gap-1 flex-shrink-0">
-                    <AlertCircle v-if="res.type === 'assignment'" class="w-3.5 h-3.5 text-amber-500" />
-                    <ExternalLink v-else-if="res.externalUrl && !res.fileUrl" class="w-3 h-3 text-slate-300" />
+                    <RouterLink v-if="res.type === 'assignment' && res.assignmentRef" :to="'/assignments/' + res.assignmentRef._id + '/submit'" class="p-1 rounded hover:bg-amber-100 text-amber-500 hover:text-amber-600 transition-all" title="Submit assignment" @click.stop>
+                      <AlertCircle class="w-3.5 h-3.5" />
+                    </RouterLink>
+                    <AlertCircle v-else-if="res.type === 'assignment'" class="w-3.5 h-3.5 text-amber-500" />
+                    <a v-else-if="res.externalUrl && !res.fileUrl" :href="res.externalUrl" target="_blank" rel="noopener noreferrer" class="p-1 rounded hover:bg-blue-100 text-slate-400 hover:text-blue-600 transition-all" title="Open link" @click.stop>
+                      <ExternalLink class="w-3.5 h-3.5" />
+                    </a>
                     <!-- AI Study button -->
                     <button
                       v-if="canAI(res)"
@@ -346,6 +351,19 @@
                 <option value="other">File / Other</option>
               </select>
             </div>
+            <!-- Assignment/Quiz date-time pickers -->
+            <template v-if="newResource.type === 'assignment' || newResource.type === 'quiz'">
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="text-xs font-semibold text-slate-600 mb-1 block">Opens At</label>
+                  <input v-model="newResource.opensAt" type="datetime-local" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                </div>
+                <div>
+                  <label class="text-xs font-semibold text-slate-600 mb-1 block">Closes At</label>
+                  <input v-model="newResource.closesAt" type="datetime-local" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                </div>
+              </div>
+            </template>
             <!-- Announcement body textarea -->
             <div v-if="newResource.type === 'announcement'">
               <label class="text-xs font-semibold text-slate-600 mb-1 block">Message</label>
@@ -739,12 +757,12 @@ async function saveSection() {
 const showAddResource = ref(false);
 const savingResource  = ref(false);
 const activeSection   = ref(null);
-const newResource     = ref({ title: '', type: 'other', externalUrl: '', description: '', file: null });
+const newResource     = ref({ title: '', type: 'other', externalUrl: '', description: '', file: null, opensAt: '', closesAt: '' });
 const resourceUploadError = ref('');
 
 function openAddResource(sec) {
   activeSection.value  = sec;
-  newResource.value    = { title: '', type: 'other', externalUrl: '', description: '', file: null };
+  newResource.value    = { title: '', type: 'other', externalUrl: '', description: '', file: null, opensAt: '', closesAt: '' };
   resourceUploadError.value = '';
   showAddResource.value = true;
 }
@@ -781,6 +799,8 @@ async function saveResource() {
     if (newResource.value.externalUrl) fd.append('externalUrl', newResource.value.externalUrl);
     if (newResource.value.description) fd.append('description', newResource.value.description);
     if (newResource.value.file)        fd.append('file', newResource.value.file);
+    if (newResource.value.opensAt)     fd.append('opensAt', new Date(newResource.value.opensAt).toISOString());
+    if (newResource.value.closesAt)    fd.append('closesAt', new Date(newResource.value.closesAt).toISOString());
 
     await api.postForm(`/api/content/sections/${activeSection.value._id}/resources`, fd);
     showAddResource.value = false;

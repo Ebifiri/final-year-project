@@ -47,7 +47,13 @@
 
         <template v-else>
           <!-- ── AI CHATBOT SECTION ────────────────────────────────────── -->
-          <section class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          <section
+            class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden relative"
+            @dragenter.prevent="chatDragOver = true"
+            @dragover.prevent="chatDragOver = true"
+            @dragleave.prevent="chatDragOver = false"
+            @drop.prevent="onChatDrop"
+          >
             <!-- Chat header -->
             <div class="flex items-center gap-3 px-3 sm:px-5 py-3 sm:py-4 border-b border-slate-100 bg-gradient-to-r from-violet-50 to-indigo-50">
               <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center flex-shrink-0">
@@ -136,14 +142,48 @@
               </template>
             </div>
 
+            <!-- File attachment -->
+            <div v-if="chatFile" class="px-3 sm:px-4 pt-2 border-t border-slate-100">
+              <div class="flex items-center gap-2 px-3 py-2 bg-violet-50 rounded-xl text-xs">
+                <Paperclip class="w-3.5 h-3.5 text-violet-500 flex-shrink-0" />
+                <span class="truncate text-violet-800 font-medium">{{ chatFile.name }}</span>
+                <span class="text-violet-400 flex-shrink-0">{{ formatFileSize(chatFile.size) }}</span>
+                <button class="ml-auto p-0.5 rounded hover:bg-violet-100 text-violet-400 hover:text-red-500 transition-colors" @click="chatFile = null">
+                  <X class="w-3 h-3" />
+                </button>
+              </div>
+            </div>
+
+            <!-- Drop overlay -->
+            <div
+              v-if="chatDragOver"
+              class="absolute inset-0 bg-violet-500/10 backdrop-blur-[2px] z-10 flex items-center justify-center rounded-2xl pointer-events-none"
+            >
+              <p class="text-sm font-bold text-violet-700">Drop file here</p>
+            </div>
+
             <!-- Input area -->
-            <div class="px-3 sm:px-4 pb-3 sm:pb-4 pt-2 border-t border-slate-100">
+            <div class="px-3 sm:px-4 pb-3 sm:pb-4 pt-2" :class="{ 'border-t border-slate-100': !chatFile }">
               <div class="flex gap-2 items-end">
+                <button
+                  class="flex-shrink-0 w-10 h-10 rounded-xl border border-slate-200 hover:bg-violet-50 hover:border-violet-300 flex items-center justify-center transition-colors"
+                  title="Attach a file"
+                  @click="$refs.chatFileInput.click()"
+                >
+                  <Paperclip class="w-4 h-4 text-slate-500" />
+                </button>
+                <input
+                  ref="chatFileInput"
+                  type="file"
+                  class="hidden"
+                  accept=".pdf,.txt,.md,.csv,.html,.jpg,.jpeg,.png,.gif,.webp,.pptx,.docx"
+                  @change="onChatFileSelect"
+                />
                 <textarea
                   v-model="chatInput"
                   rows="2"
                   class="flex-1 resize-none border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400 text-slate-800 placeholder:text-slate-400"
-                  placeholder="Ask a study question…"
+                  :placeholder="chatFile ? 'Ask about this file…' : 'Ask a study question…'"
                   :disabled="chatLoading"
                   @keydown.enter.exact.prevent="sendChat"
                 />
@@ -155,7 +195,7 @@
                   <Send class="w-4 h-4 text-white" />
                 </button>
               </div>
-              <p class="text-[10px] text-slate-400 mt-1.5 text-right">Enter to send · Shift+Enter for new line</p>
+              <p class="text-[10px] text-slate-400 mt-1.5 text-right">Enter to send · Drag & drop or 📎 to attach a file</p>
             </div>
           </section>
 
@@ -273,8 +313,8 @@
 import { ref, reactive, computed, onMounted, nextTick } from 'vue';
 import { RouterLink } from 'vue-router';
 import {
-  Sparkles, BookOpen, FileText, ChevronDown, Send, MessageSquare, Trash2,
-  FileText as SummaryIcon, ListChecks, Layers, BookOpen as FlashIcon,
+  Sparkles, BookOpen, FileText, ChevronDown, Send, MessageSquare, Trash2, Paperclip, X,
+  FileText as SummaryIcon, Layers, BookOpen as FlashIcon,
 } from 'lucide-vue-next';
 import AIStudyModal from '@/components/AIStudyModal.vue';
 import { useAuthStore }      from '@/stores/auth.js';
@@ -350,6 +390,28 @@ const chatInput   = ref('');
 const chatLoading = ref(false);
 const chatError   = ref('');
 const chatScrollEl = ref(null);
+const chatFile    = ref(null);
+const chatDragOver = ref(false);
+const chatFileInput = ref(null);
+
+function onChatFileSelect(e) {
+  const file = e.target.files[0];
+  if (file) chatFile.value = file;
+  e.target.value = '';
+}
+
+function onChatDrop(e) {
+  chatDragOver.value = false;
+  const file = e.dataTransfer.files[0];
+  if (file) chatFile.value = file;
+}
+
+function formatFileSize(bytes) {
+  if (!bytes) return '';
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
 
 async function scrollToBottom() {
   await nextTick();
@@ -366,14 +428,27 @@ async function sendChat() {
   chatError.value = '';
 
   // Append user message
-  chatHistory.value = [...chatHistory.value, { role: 'user', text }];
+  const userMsg = chatFile.value ? `📎 ${chatFile.value.name}\n${text}` : text;
+  chatHistory.value = [...chatHistory.value, { role: 'user', text: userMsg }];
   await scrollToBottom();
 
   chatLoading.value = true;
   try {
-    // Send message + full history (excluding the message we just added to the array)
     const historyForApi = chatHistory.value.slice(0, -1);
-    const data = await api.post('/api/ai/chat', { message: text, history: historyForApi });
+    let data;
+
+    if (chatFile.value) {
+      // Send as FormData with file
+      const fd = new FormData();
+      fd.append('message', text);
+      fd.append('history', JSON.stringify(historyForApi));
+      fd.append('file', chatFile.value);
+      data = await api.postForm('/api/ai/chat', fd);
+      chatFile.value = null; // clear file after sending
+    } else {
+      data = await api.post('/api/ai/chat', { message: text, history: historyForApi });
+    }
+
     chatHistory.value = [...chatHistory.value, { role: 'model', text: data.reply }];
     await scrollToBottom();
   } catch (e) {
@@ -416,16 +491,15 @@ function escapeHtml(text) {
 // ── Static config ─────────────────────────────────────────────────────────────
 const CAPABILITIES = [
   { label: 'Summaries',   icon: SummaryIcon },
-  { label: 'Key Points',  icon: ListChecks  },
   { label: 'Quiz',        icon: Layers      },
   { label: 'Flashcards',  icon: FlashIcon   },
+  { label: 'File Upload', icon: Paperclip   },
   { label: 'Chat',        icon: MessageSquare },
 ];
 
 const ACTIONS = [
   { id: 'summary',    label: 'Summarise', icon: SummaryIcon, cls: 'border-slate-200 text-slate-600 hover:border-violet-400 hover:text-violet-700 hover:bg-violet-50 bg-white' },
   { id: 'quiz',       label: 'Quiz',      icon: Layers,      cls: 'border-slate-200 text-slate-600 hover:border-violet-400 hover:text-violet-700 hover:bg-violet-50 bg-white' },
-  { id: 'keypoints',  label: 'Key Points',icon: ListChecks,  cls: 'border-slate-200 text-slate-600 hover:border-violet-400 hover:text-violet-700 hover:bg-violet-50 bg-white' },
   { id: 'flashcards', label: 'Flashcards',icon: FlashIcon,   cls: 'border-slate-200 text-slate-600 hover:border-violet-400 hover:text-violet-700 hover:bg-violet-50 bg-white' },
 ];
 

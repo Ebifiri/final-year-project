@@ -1,9 +1,11 @@
 import express from 'express';
-import Course   from '../models/Course.js';
-import Section  from '../models/Section.js';
-import Resource from '../models/Resource.js';
-import protect  from '../middleware/auth.js';
-import upload   from '../middleware/upload.js';
+import Course      from '../models/Course.js';
+import Section     from '../models/Section.js';
+import Resource    from '../models/Resource.js';
+import Assignment  from '../models/Assignment.js';
+import Quiz        from '../models/Quiz.js';
+import protect     from '../middleware/auth.js';
+import upload      from '../middleware/upload.js';
 import { getServerFetchUrl, fetchResourceStream } from '../utils/fileAccess.js';
 import { notifyEnrolledStudents } from '../utils/notifyEnrolledStudents.js';
 
@@ -183,7 +185,7 @@ router.post('/sections/:sectionId/resources',
       const allowed = await canManageCourse(req.user._id, req.user.role, section.courseId.code);
       if (!allowed) return res.status(403).json({ message: 'Not authorised' });
 
-      const { title, type, externalUrl, description, assignmentRef, quizRef } = req.body;
+      const { title, type, externalUrl, description, assignmentRef, quizRef, opensAt, closesAt } = req.body;
       const count = await Resource.countDocuments({ sectionId: section._id });
 
       const resourceData = {
@@ -200,9 +202,37 @@ router.post('/sections/:sectionId/resources',
       };
 
       if (req.file) {
-        resourceData.fileUrl      = req.file.path;     // Cloudinary URL or local path
-        resourceData.filePublicId = req.file.filename; // Cloudinary public_id
+        resourceData.fileUrl      = req.file.path;
+        resourceData.filePublicId = req.file.filename;
         resourceData.mimeType     = req.file.mimetype;
+      }
+
+      // Auto-create Assignment/Quiz document if type matches and no ref provided
+      if (type === 'assignment' && !assignmentRef) {
+        const assignment = await Assignment.create({
+          courseId: section.courseId._id,
+          title,
+          description: description || '',
+          dueDate: closesAt || undefined,
+          opensAt: opensAt || undefined,
+          closesAt: closesAt || undefined,
+          createdBy: req.user._id,
+        });
+        resourceData.assignmentRef = assignment._id;
+      }
+
+      if (type === 'quiz' && !quizRef) {
+        const quiz = await Quiz.create({
+          courseId: section.courseId._id,
+          title,
+          description: description || '',
+          dueDate: closesAt || undefined,
+          opensAt: opensAt || undefined,
+          closesAt: closesAt || undefined,
+          questions: [],
+          createdBy: req.user._id,
+        });
+        resourceData.quizRef = quiz._id;
       }
 
       const resource = await Resource.create(resourceData);
