@@ -1,8 +1,19 @@
 <template>
   <main class="flex-1 bg-slate-50">
 
+    <!-- Course Hero Banner Loading Skeleton -->
+    <div v-if="loading" class="relative overflow-hidden px-4 sm:px-6 lg:px-10 pt-6 sm:pt-8 pb-6 sm:pb-8 bg-slate-200 animate-pulse">
+      <div class="relative max-w-6xl mx-auto flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
+        <div class="w-full">
+          <div class="w-24 h-4 bg-slate-300/60 rounded mb-2"></div>
+          <div class="w-2/3 h-8 bg-slate-300/60 rounded"></div>
+        </div>
+        <div class="w-24 h-8 bg-slate-300/60 rounded-xl self-start sm:mt-6"></div>
+      </div>
+    </div>
+
     <!-- Course Hero Banner -->
-    <div v-if="course" :class="['relative overflow-hidden px-4 sm:px-6 lg:px-10 pt-6 sm:pt-8 pb-6 sm:pb-8', course.color]">
+    <div v-else-if="course" :class="['relative overflow-hidden px-4 sm:px-6 lg:px-10 pt-6 sm:pt-8 pb-6 sm:pb-8', course.color]">
       <div class="absolute inset-0 bg-linear-to-br from-black/20 to-black/50"></div>
       <div class="relative max-w-6xl mx-auto flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
         <div>
@@ -83,8 +94,34 @@
       <section v-else>
 
         <!-- Loading skeleton -->
-        <div v-if="contentLoading" class="flex flex-col gap-4">
-          <div v-for="i in 3" :key="i" class="bg-white rounded-2xl border border-slate-200 h-24 animate-pulse" />
+        <div v-if="contentLoading" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5 items-start">
+          <div
+            v-for="i in 6"
+            :key="i"
+            class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden animate-pulse flex flex-col"
+          >
+            <!-- Section header skeleton -->
+            <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-slate-200"></div>
+                <div class="space-y-1.5">
+                  <div class="w-28 h-3.5 bg-slate-200 rounded"></div>
+                  <div class="w-16 h-2.5 bg-slate-200 rounded"></div>
+                </div>
+              </div>
+              <div class="w-4 h-4 bg-slate-200 rounded"></div>
+            </div>
+            <!-- Resources list skeleton -->
+            <div class="divide-y divide-slate-50 px-5 py-2">
+              <div v-for="j in 2" :key="j" class="flex items-center gap-3 py-3">
+                <div class="w-7 h-7 rounded-lg bg-slate-200"></div>
+                <div class="flex-grow space-y-1.5">
+                  <div class="w-3/4 h-3 bg-slate-200 rounded"></div>
+                  <div class="w-12 h-2.5 bg-slate-200 rounded"></div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <template v-else>

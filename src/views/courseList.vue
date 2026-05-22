@@ -51,9 +51,40 @@
       </div>
     </div>
 
+    <!-- Course Loading Skeleton -->
+    <div
+      v-if="courseStore.loading"
+      class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"
+    >
+      <div
+        v-for="i in 8"
+        :key="i"
+        class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col animate-pulse"
+      >
+        <div class="h-28 bg-slate-200 relative p-4 flex flex-col justify-between">
+          <div class="flex justify-between items-start">
+            <div class="w-12 h-4 bg-slate-300/60 rounded"></div>
+            <div class="w-16 h-4 bg-slate-300/60 rounded"></div>
+          </div>
+          <div class="w-8 h-8 bg-slate-300/60 rounded-full"></div>
+        </div>
+        <div class="p-4 flex flex-col flex-1 space-y-3">
+          <div class="h-4 bg-slate-200 rounded w-3/4"></div>
+          <div class="h-3 bg-slate-200 rounded w-1/4"></div>
+          <div class="space-y-1.5 flex-1">
+            <div class="h-3 bg-slate-100 rounded w-full"></div>
+            <div class="h-3 bg-slate-100 rounded w-5/6"></div>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-100 flex justify-end">
+            <div class="w-16 h-7 bg-slate-200 rounded-lg"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Course grid -->
     <div
-      v-if="paginatedCourses.length"
+      v-else-if="paginatedCourses.length"
       class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"
     >
       <RouterLink

@@ -52,7 +52,14 @@
 
         <!-- Loading skeleton -->
         <div v-if="lecturerLoading" class="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-          <div v-for="i in 8" :key="i" class="bg-white rounded-xl border border-slate-200 h-36 animate-pulse" />
+          <div v-for="i in 8" :key="i" class="bg-white rounded-xl border border-slate-200 overflow-hidden animate-pulse flex flex-col">
+            <div class="h-24 bg-slate-200"></div>
+            <div class="p-3 space-y-2 flex-grow">
+              <div class="h-3.5 bg-slate-200 rounded w-5/6"></div>
+              <div class="h-3 bg-slate-100 rounded w-1/3"></div>
+              <div class="w-16 h-4 bg-slate-200 rounded-full mt-2"></div>
+            </div>
+          </div>
         </div>
 
         <!-- Empty state -->
@@ -120,7 +127,17 @@
           <h2 class="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
             <Clock class="w-4 h-4" /> Recently Accessed
           </h2>
-          <div v-if="!enrollmentStore.loading && recentCourses.length === 0" class="flex flex-col items-center justify-center py-10 bg-white rounded-xl border border-slate-200 border-dashed text-center">
+          <!-- Loading skeleton -->
+          <div v-if="enrollmentStore.loading" class="flex gap-4 overflow-x-auto pb-2">
+            <div v-for="i in 3" :key="i" class="flex-shrink-0 w-52 sm:w-56 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden animate-pulse">
+              <div class="h-20 bg-slate-200"></div>
+              <div class="p-3 space-y-2">
+                <div class="h-3.5 bg-slate-200 rounded w-5/6"></div>
+                <div class="h-3 bg-slate-100 rounded w-1/2"></div>
+              </div>
+            </div>
+          </div>
+          <div v-else-if="recentCourses.length === 0" class="flex flex-col items-center justify-center py-10 bg-white rounded-xl border border-slate-200 border-dashed text-center">
             <Clock class="w-8 h-8 text-slate-300 mb-2" />
             <p class="text-sm font-medium text-slate-500">No recently accessed courses</p>
             <RouterLink to="/courses" class="text-xs text-blue-500 hover:underline mt-1">Browse courses →</RouterLink>
@@ -154,7 +171,18 @@
             <span class="text-xs text-slate-400">{{ enrolledCourses.length }} courses</span>
           </div>
 
-          <div v-if="!enrollmentStore.loading && paginatedCourses.length === 0" class="flex flex-col items-center justify-center py-16 bg-white rounded-xl border border-slate-200 border-dashed text-center">
+          <!-- Loading skeleton -->
+          <div v-if="enrollmentStore.loading" class="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div v-for="i in 4" :key="i" class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden animate-pulse">
+              <div class="h-24 bg-slate-200"></div>
+              <div class="p-3 space-y-3">
+                <div class="h-3.5 bg-slate-200 rounded w-5/6"></div>
+                <div class="h-3 bg-slate-100 rounded w-1/3"></div>
+                <div class="h-7 bg-slate-200 rounded-lg w-full"></div>
+              </div>
+            </div>
+          </div>
+          <div v-else-if="paginatedCourses.length === 0" class="flex flex-col items-center justify-center py-16 bg-white rounded-xl border border-slate-200 border-dashed text-center">
             <BookOpen class="w-10 h-10 text-slate-300 mb-3" />
             <p class="text-sm font-semibold text-slate-600">You have no courses enrolled currently</p>
             <p class="text-xs text-slate-400 mt-1">Head to the course catalogue to get started.</p>

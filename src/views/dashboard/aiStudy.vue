@@ -40,9 +40,46 @@
       </div>
 
       <template v-else>
-        <!-- Loading enrollments -->
-        <div v-if="loading" class="flex items-center justify-center py-16">
-          <div class="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
+        <!-- Loading enrollments skeleton -->
+        <div v-if="loading" class="space-y-6 sm:space-y-8 animate-pulse">
+          <!-- Chat Card Skeleton -->
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <!-- Header skeleton -->
+            <div class="flex items-center gap-3 px-3 sm:px-5 py-3 sm:py-4 border-b border-slate-100 bg-slate-50/50">
+              <div class="w-8 h-8 rounded-xl bg-slate-200 flex-shrink-0"></div>
+              <div class="space-y-1.5 flex-1">
+                <div class="w-20 h-3.5 bg-slate-200 rounded"></div>
+                <div class="w-36 h-2.5 bg-slate-200 rounded"></div>
+              </div>
+            </div>
+            <!-- Body skeleton -->
+            <div class="px-5 py-8 flex flex-col items-center justify-center text-center">
+              <div class="w-12 h-12 rounded-2xl bg-slate-100 mb-3"></div>
+              <div class="w-48 h-3.5 bg-slate-200 rounded mb-2"></div>
+              <div class="w-64 h-3 bg-slate-200 rounded"></div>
+            </div>
+            <!-- Input skeleton -->
+            <div class="px-3 sm:px-4 pb-3 sm:pb-4 pt-2 border-t border-slate-100 flex gap-2 items-center">
+              <div class="w-10 h-10 rounded-xl bg-slate-100 flex-shrink-0"></div>
+              <div class="h-10 bg-slate-100 rounded-xl flex-grow"></div>
+              <div class="w-10 h-10 rounded-xl bg-slate-200 flex-shrink-0"></div>
+            </div>
+          </div>
+
+          <!-- Analyse Course Materials Skeleton -->
+          <div class="space-y-4">
+            <div class="w-48 h-4 bg-slate-300 rounded mb-4"></div>
+            <div v-for="i in 3" :key="i" class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm p-4 flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-slate-200 flex-shrink-0"></div>
+                <div class="space-y-1.5">
+                  <div class="w-32 h-3.5 bg-slate-200 rounded"></div>
+                  <div class="w-16 h-2.5 bg-slate-200 rounded"></div>
+                </div>
+              </div>
+              <div class="w-4 h-4 bg-slate-200 rounded"></div>
+            </div>
+          </div>
         </div>
 
         <template v-else>

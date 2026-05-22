@@ -1,9 +1,35 @@
 <template>
   <main class="flex-1 bg-slate-50 min-h-screen">
 
-    <!-- Loading -->
-    <div v-if="loading" class="flex items-center justify-center min-h-[60vh]">
-      <div class="w-10 h-10 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
+    <!-- Loading Skeleton -->
+    <div v-if="loading" class="w-full animate-pulse">
+      <!-- Skeleton Hero Banner -->
+      <div class="bg-gradient-to-br from-slate-300 via-slate-400 to-slate-500 text-white px-4 sm:px-6 lg:px-10 pt-6 sm:pt-8 pb-6 sm:pb-8">
+        <div class="max-w-4xl mx-auto">
+          <div class="w-10 h-4 bg-slate-400/60 rounded mb-3"></div>
+          <div class="flex items-start gap-3">
+            <div class="w-10 h-10 rounded-xl bg-slate-400/60 flex-shrink-0"></div>
+            <div class="flex-1 space-y-2">
+              <div class="h-6 bg-slate-400/60 rounded w-1/2"></div>
+              <div class="h-4 bg-slate-400/40 rounded w-3/4"></div>
+            </div>
+          </div>
+          <div class="flex flex-wrap gap-2 mt-4">
+            <div class="w-20 h-6 bg-slate-400/50 rounded-full"></div>
+            <div class="w-32 h-6 bg-slate-400/50 rounded-full"></div>
+            <div class="w-24 h-6 bg-slate-400/50 rounded-full"></div>
+          </div>
+        </div>
+      </div>
+      <!-- Skeleton Main Content -->
+      <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-10 py-6 sm:py-8">
+        <div class="rounded-2xl border-2 border-dashed border-slate-300 bg-white p-16 sm:p-24 flex flex-col items-center justify-center text-center">
+          <div class="w-16 h-16 rounded-2xl bg-slate-200 mb-4"></div>
+          <div class="w-48 h-4 bg-slate-200 rounded mb-2"></div>
+          <div class="w-32 h-3 bg-slate-200 rounded mb-4"></div>
+          <div class="w-36 h-10 bg-slate-300 rounded-xl"></div>
+        </div>
+      </div>
     </div>
 
     <!-- Assignment not found -->
