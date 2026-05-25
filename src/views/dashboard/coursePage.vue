@@ -212,6 +212,7 @@
                 <div
                   v-for="res in sec.resources"
                   :key="res._id"
+                  :id="'resource-' + res._id"
                   :class="['flex items-center gap-2 px-3 sm:px-4 py-3 group transition-colors', cart.isSelected(res._id) ? 'bg-blue-50' : 'hover:bg-blue-50']"
                 >
                   <!-- Select checkbox (downloadable resources only) -->
@@ -517,7 +518,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, nextTick } from 'vue';
 import { useRoute, RouterLink } from 'vue-router';
 import {
   ChevronDown, BookOpen, Calendar, FileText,
@@ -584,6 +585,7 @@ onMounted(async () => {
   // Load sections + resources if user can view
   if (canViewContent.value) {
     await loadContent();
+    scrollToHashResource();
   }
 });
 
@@ -615,6 +617,30 @@ async function loadContent() {
     sections.value = [];
   } finally {
     contentLoading.value = false;
+  }
+}
+
+// ── Scroll to resource from notification deep-link ────────────────────────────
+async function scrollToHashResource() {
+  const hash = window.location.hash;
+  if (!hash || !hash.startsWith('#resource-')) return;
+  const resourceId = hash.replace('#resource-', '');
+
+  // Expand the section that contains this resource
+  for (const sec of sections.value) {
+    const found = sec.resources?.find(r => r._id === resourceId);
+    if (found) {
+      expandedSections.value[sec._id] = true;
+      break;
+    }
+  }
+
+  await nextTick();
+  const el = document.getElementById(`resource-${resourceId}`);
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.classList.add('resource-highlight');
+    setTimeout(() => el.classList.remove('resource-highlight'), 2500);
   }
 }
 
@@ -886,3 +912,15 @@ async function executeDelete() {
   }
 }
 </script>
+
+<style scoped>
+.resource-highlight {
+  animation: highlight-pulse 2.5s ease-out;
+}
+
+@keyframes highlight-pulse {
+  0%   { background-color: rgba(59, 130, 246, 0.25); box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.4); }
+  30%  { background-color: rgba(59, 130, 246, 0.15); box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25); }
+  100% { background-color: transparent; box-shadow: none; }
+}
+</style>

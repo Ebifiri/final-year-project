@@ -248,6 +248,7 @@ router.post('/sections/:sectionId/resources',
           ? `New announcement: ${title}`
           : `New ${type}: ${title}`,
         body:       description || '',
+        resourceId: resource._id,
       });
 
       res.status(201).json({ resource });

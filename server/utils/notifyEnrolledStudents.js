@@ -49,18 +49,22 @@ export async function notifyEnrolledStudents({
   type,
   title,
   body = '',
+  resourceId = null,
 }) {
   try {
     // 1. Find all students enrolled in this course
     const enrollments = await Enrollment.find({ course: courseId }).populate('user', 'name email');
     if (!enrollments.length) return;
 
-    const link = `/courses/${courseCode}`;
+    const link = resourceId
+      ? `/courses/${courseCode}#resource-${resourceId}`
+      : `/courses/${courseCode}`;
 
     // 2. Bulk-create in-app notifications
     const notifDocs = enrollments.map(e => ({
       userId:   e.user._id,
       courseId,
+      resourceId: resourceId || undefined,
       type,
       title,
       body,

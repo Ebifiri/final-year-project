@@ -12,6 +12,10 @@ const notificationSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Course',
     },
+    resourceId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Resource',
+    },
     type: {
       type: String,
       enum: ['resource', 'assignment', 'quiz', 'announcement'],

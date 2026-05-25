@@ -228,8 +228,8 @@ function isEnrolled(code) { return enrollmentStore.isEnrolled(code); }
 
 async function enroll(code) {
   if (!auth.isLoggedIn) {
-    // Save destination and redirect to login
-    router.push({ name: 'login', query: { redirect: `/courses/${encodeURIComponent(code)}` } });
+    // Take user to the course page which has its own login gate
+    router.push(`/courses/${encodeURIComponent(code)}`);
     return;
   }
   await enrollmentStore.enroll(code);
