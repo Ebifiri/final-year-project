@@ -81,7 +81,8 @@ router.post('/analyze', protect, async (req, res) => {
     let result;
     if (isOffice) {
       try {
-        const textContent = await officeParser.parseOffice(fileBuffer);
+        const ast = await officeParser.parseOffice(fileBuffer);
+        const textContent = ast.toText();
         result = await model.generateContent([
           { text: `Here is the text content extracted from the document "${resource.title}":\n\n${textContent}` },
           PROMPTS[action],
@@ -160,7 +161,8 @@ router.post('/chat', protect, upload.single('file'), async (req, res) => {
           const buffer = Buffer.from(await resp.arrayBuffer());
           if (isOfficeFile(mimeType, req.file.originalname)) {
             try {
-              const textContent = await officeParser.parseOffice(buffer);
+              const ast = await officeParser.parseOffice(buffer);
+              const textContent = ast.toText();
               parts.push({ text: `The user uploaded a document named "${req.file.originalname}". Here is its extracted text content:\n---\n${textContent}\n---\n` });
             } catch (parseErr) {
               console.warn('[ai/chat] Failed to parse uploaded Office file:', parseErr.message);
@@ -225,7 +227,8 @@ router.post('/generate-quiz', protect, upload.array('files', 10), async (req, re
           const buffer = Buffer.from(await resp.arrayBuffer());
           if (isOfficeFile(mimeType, file.originalname)) {
             try {
-              const textContent = await officeParser.parseOffice(buffer);
+              const ast = await officeParser.parseOffice(buffer);
+              const textContent = ast.toText();
               fileParts.push({ text: `Study material document (name: "${file.originalname}") text content:\n---\n${textContent}\n---\n` });
             } catch (parseErr) {
               console.warn(`[generate-quiz] Failed to parse Office file ${file.originalname}:`, parseErr.message);
