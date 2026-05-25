@@ -242,11 +242,11 @@ router.post('/sections/:sectionId/resources',
       notifyEnrolledStudents({
         courseId:   section.courseId._id,
         courseCode: section.courseId.code,
-        courseName: section.courseId.name,
+        courseName: section.courseId.title,
         type:       notifType,
         title:      notifType === 'announcement'
-          ? `New announcement: ${title}`
-          : `New ${type}: ${title}`,
+          ? `New announcement: ${title} from ${section.courseId.code}`
+          : `New ${type}: ${title} from ${section.courseId.code}`,
         body:       description || '',
         resourceId: resource._id,
       });

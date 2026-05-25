@@ -137,7 +137,7 @@
                           </div>
                           <div class="min-w-0 flex-1">
                             <p class="text-sm font-medium text-slate-800 truncate" :class="{ 'font-bold': !n.read }">{{ n.title }}</p>
-                            <p v-if="n.courseId?.name" class="text-[11px] text-indigo-500 font-medium truncate mt-0.5">{{ n.courseId.code }} — {{ n.courseId.name }}</p>
+                            <p v-if="n.courseId?.title" class="text-[11px] text-indigo-500 font-medium truncate mt-0.5">{{ n.courseId.code }} — {{ n.courseId.title }}</p>
                             <p v-if="n.body" class="text-xs text-slate-500 truncate mt-0.5">{{ n.body }}</p>
                             <p class="text-[10px] text-slate-400 mt-1">{{ timeAgo(n.createdAt) }}</p>
                           </div>

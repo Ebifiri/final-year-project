@@ -11,7 +11,7 @@ router.get('/', protect, async (req, res) => {
     const notifications = await Notification.find({ userId: req.user._id })
       .sort({ createdAt: -1 })
       .limit(50)
-      .populate('courseId', 'code name');
+      .populate('courseId', 'code title');
     res.json({ notifications });
   } catch (err) {
     res.status(500).json({ message: err.message });
