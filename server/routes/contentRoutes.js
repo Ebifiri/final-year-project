@@ -145,8 +145,8 @@ router.get('/:courseCode', async (req, res) => {
         const resources = await Resource.find({ sectionId: sec._id })
           .sort({ order: 1 })
           .populate('uploadedBy', 'name')
-          .populate('assignmentRef', 'title dueDate totalPoints')
-          .populate('quizRef', 'title dueDate durationMinutes');
+          .populate('assignmentRef', 'title dueDate totalPoints opensAt closesAt description')
+          .populate('quizRef', 'title dueDate durationMinutes opensAt closesAt');
         return { ...sec.toObject(), resources };
       })
     );
@@ -196,7 +196,7 @@ router.post('/sections/:sectionId/resources',
       const allowed = await canManageCourse(req.user._id, req.user.role, section.courseId.code);
       if (!allowed) return res.status(403).json({ message: 'Not authorised' });
 
-      const { title, type, externalUrl, description, assignmentRef, quizRef, opensAt, closesAt, totalPoints, generateAI, questionCount } = req.body;
+      const { title, type, externalUrl, description, assignmentRef, quizRef, opensAt, closesAt, totalPoints, generateAI, questionCount, durationMinutes } = req.body;
       const count = await Resource.countDocuments({ sectionId: section._id });
 
       const resourceData = {
@@ -344,6 +344,7 @@ Generate EXACTLY ${qCount} questions.`;
           dueDate: closesAt || undefined,
           opensAt: opensAt || undefined,
           closesAt: closesAt || undefined,
+          durationMinutes: parseInt(durationMinutes) || 20,
           questions,
           createdBy: req.user._id,
         });

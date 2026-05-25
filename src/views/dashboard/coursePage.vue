@@ -255,6 +255,7 @@
                         <span v-if="res.assignmentRef.opensAt && res.assignmentRef.closesAt" class="mx-1.5">&bull;</span>
                         <span v-if="res.assignmentRef.closesAt">Closes: {{ formatDateTime(res.assignmentRef.closesAt) }}</span>
                       </span>
+                      <p v-if="res.assignmentRef.description" class="text-[10px] text-slate-500 mt-0.5 leading-relaxed line-clamp-2">{{ res.assignmentRef.description }}</p>
                     </div>
                   </RouterLink>
 
@@ -449,6 +450,23 @@
               <div v-if="newResource.type === 'assignment'" class="mb-3">
                 <label class="text-xs font-semibold text-slate-600 mb-1 block">Total Marks / Points</label>
                 <input v-model.number="newResource.totalPoints" type="number" min="1" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" placeholder="e.g. 100" />
+              </div>
+
+              <!-- Assignment description -->
+              <div v-if="newResource.type === 'assignment'" class="mb-3">
+                <label class="text-xs font-semibold text-slate-600 mb-1 block">Description</label>
+                <textarea
+                  v-model="newResource.description"
+                  rows="3"
+                  class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
+                  placeholder="Describe the assignment requirements..."
+                />
+              </div>
+
+              <!-- Quiz duration -->
+              <div v-if="newResource.type === 'quiz'" class="mb-3">
+                <label class="text-xs font-semibold text-slate-600 mb-1 block">Duration (minutes)</label>
+                <input v-model.number="newResource.durationMinutes" type="number" min="1" max="300" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" placeholder="e.g. 15" />
               </div>
 
               <!-- Extra field for AI quiz generation -->
@@ -911,12 +929,12 @@ async function saveSection() {
 const showAddResource = ref(false);
 const savingResource  = ref(false);
 const activeSection   = ref(null);
-const newResource     = ref({ title: '', type: 'other', externalUrl: '', description: '', file: null, opensAt: '', closesAt: '', totalPoints: 100, generateAI: false, questionCount: 8, quizFiles: [] });
+const newResource     = ref({ title: '', type: 'other', externalUrl: '', description: '', file: null, opensAt: '', closesAt: '', totalPoints: 100, generateAI: false, questionCount: 8, quizFiles: [], durationMinutes: 20 });
 const resourceUploadError = ref('');
 
 function openAddResource(sec) {
   activeSection.value  = sec;
-  newResource.value    = { title: '', type: 'other', externalUrl: '', description: '', file: null, opensAt: '', closesAt: '', totalPoints: 100, generateAI: false, questionCount: 8, quizFiles: [] };
+  newResource.value    = { title: '', type: 'other', externalUrl: '', description: '', file: null, opensAt: '', closesAt: '', totalPoints: 100, generateAI: false, questionCount: 8, quizFiles: [], durationMinutes: 20 };
   resourceUploadError.value = '';
   showAddResource.value = true;
 }
@@ -967,6 +985,7 @@ async function saveResource() {
         fd.append('quizFiles', f);
       }
     }
+    if (newResource.value.durationMinutes) fd.append('durationMinutes', newResource.value.durationMinutes);
 
     await api.postForm(`/api/content/sections/${activeSection.value._id}/resources`, fd);
     showAddResource.value = false;

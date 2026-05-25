@@ -47,8 +47,8 @@
       <div class="bg-gradient-to-br from-amber-500 via-orange-500 to-red-500 text-white px-4 sm:px-6 lg:px-10 pt-6 sm:pt-8 pb-6 sm:pb-8">
         <div class="absolute inset-0 bg-linear-to-br from-black/10 to-black/30"></div>
         <div class="relative max-w-4xl mx-auto">
-          <button @click="$router.back()" class="flex items-center gap-1 text-white/70 hover:text-white text-xs font-medium mb-3 transition-colors">
-            <ArrowLeft class="w-3.5 h-3.5" /> Back
+          <button @click="goBackToCourse" class="flex items-center gap-1 text-white/70 hover:text-white text-xs font-medium mb-3 transition-colors cursor-pointer">
+            <ArrowLeft class="w-3.5 h-3.5" /> Back to Course
           </button>
           <div class="flex items-start gap-3">
             <div class="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center flex-shrink-0">
@@ -123,6 +123,9 @@
             </div>
             <p v-if="existingSubmission.feedback" class="mt-3 text-xs text-slate-600 bg-blue-50 px-3 py-2 rounded-lg">
               <strong>Feedback:</strong> {{ existingSubmission.feedback }}
+            </p>
+            <p v-if="portalStatus === 'open'" class="mt-3 text-[11px] text-amber-600 bg-amber-50 px-3 py-2 rounded-lg font-medium">
+              📝 You can re-upload files below to update your submission before the deadline.
             </p>
           </div>
 
@@ -362,7 +365,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import { useRoute, RouterLink } from 'vue-router';
+import { useRoute, useRouter, RouterLink } from 'vue-router';
 import {
   FileUp, FileText, FileX, ArrowLeft, Upload, X, Send,
   Loader2, Clock, Award, CheckCircle, XCircle, UserCheck
@@ -371,7 +374,14 @@ import { api } from '@/api/client.js';
 import { useAuthStore } from '@/stores/auth.js';
 
 const route = useRoute();
+const router = useRouter();
 const assignmentId = computed(() => route.params.assignmentId);
+
+function goBackToCourse() {
+  const code = assignment.value?.courseId?.code;
+  if (code) router.push(`/courses/${code}`);
+  else router.back();
+}
 
 const auth = useAuthStore();
 const isLecturer = computed(() => ['lecturer', 'admin'].includes(auth.user?.role));

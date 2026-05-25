@@ -268,7 +268,11 @@
           </div>
           <div v-else class="relative flex flex-col gap-0">
             <div class="absolute left-[15px] top-4 bottom-4 w-px bg-slate-100"></div>
-            <div v-for="t in tasks" :key="t.id" class="relative flex gap-4 pb-5 last:pb-0">
+            <RouterLink
+              v-for="t in tasks" :key="t.id"
+              :to="t.type === 'assignment' ? `/assignments/${t.id}/submit` : `/quizzes/${t.id}`"
+              class="relative flex gap-4 pb-5 last:pb-0 hover:bg-slate-50/50 rounded-lg -mx-2 px-2 py-1 transition-colors cursor-pointer"
+            >
               <div :class="['w-[10px] h-[10px] rounded-full mt-1.5 flex-shrink-0 ml-[10px] border-2 border-white ring-2', urgencyRing[t.urgency]]"></div>
               <div class="flex-1 min-w-0">
                 <p class="text-sm font-semibold text-slate-800 leading-snug">{{ t.title }}</p>
@@ -282,7 +286,7 @@
                   </span>
                 </div>
               </div>
-            </div>
+            </RouterLink>
           </div>
         </section>
       </div>

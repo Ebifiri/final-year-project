@@ -258,8 +258,8 @@
         </div>
 
         <div class="flex justify-end py-4">
-          <button @click="$router.push(`/courses`)" class="px-6 py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl transition-all shadow-md text-xs cursor-pointer">
-            Return to Catalogue
+          <button @click="$router.push(`/courses/${quiz.courseId?.code || ''}`)" class="px-6 py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl transition-all shadow-md text-xs cursor-pointer">
+            Return to Course
           </button>
         </div>
       </div>

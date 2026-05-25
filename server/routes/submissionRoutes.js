@@ -25,7 +25,7 @@ router.post('/', protect, upload.array('files', 20), async (req, res) => {
 
     // Verify enrollment
     const enrolled = await Enrollment.findOne({
-      student: req.user._id, course: assignment.courseId,
+      user: req.user._id, course: assignment.courseId,
     });
     if (!enrolled && req.user.role === 'student') {
       return res.status(403).json({ message: 'Enroll in this course first' });
@@ -45,7 +45,9 @@ router.post('/', protect, upload.array('files', 20), async (req, res) => {
 
     let submission;
     if (existing) {
-      existing.files = [...existing.files, ...files];
+      existing.files = files;  // Replace files on re-submission
+      existing.grade = undefined;  // Reset grade on re-submission
+      existing.feedback = undefined;
       submission = await existing.save();
     } else {
       submission = await Submission.create({

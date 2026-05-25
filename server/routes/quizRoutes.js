@@ -20,7 +20,7 @@ router.get('/:id', protect, async (req, res) => {
     // Check enrollment
     if (req.user.role === 'student') {
       const enrolled = await Enrollment.findOne({
-        student: req.user._id, course: quiz.courseId._id,
+        user: req.user._id, course: quiz.courseId._id,
       });
       if (!enrolled) return res.status(403).json({ message: 'Enroll in this course first' });
     }
