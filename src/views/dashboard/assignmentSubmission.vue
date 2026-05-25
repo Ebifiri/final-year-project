@@ -195,13 +195,13 @@
             </div>
           </div>
 
-          <!-- Selected files -->
-          <div v-if="selectedFiles.length" class="mt-5 space-y-2">
-            <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-              {{ selectedFiles.length }} file{{ selectedFiles.length !== 1 ? 's' : '' }} selected
+          <!-- Selected and existing files list -->
+          <div v-if="filesList.length" class="mt-5 space-y-2">
+            <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+              {{ filesList.length }} file{{ filesList.length !== 1 ? 's' : '' }} in submission
             </p>
             <div
-              v-for="(file, i) in selectedFiles"
+              v-for="(file, i) in filesList"
               :key="i"
               class="flex items-center gap-3 px-4 py-3 bg-white rounded-xl border border-slate-200 shadow-sm group"
             >
@@ -209,8 +209,12 @@
                 <FileText class="w-4 h-4 text-blue-600" />
               </div>
               <div class="flex-1 min-w-0">
-                <p class="text-sm font-medium text-slate-800 truncate">{{ file.name }}</p>
-                <p class="text-xs text-slate-400">{{ formatSize(file.size) }}</p>
+                <p class="text-sm font-semibold text-slate-800 truncate">{{ file.name }}</p>
+                <p class="text-xs text-slate-400">
+                  {{ formatSize(file.size) }}
+                  <span v-if="file.isExisting" class="ml-2 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-extrabold border border-emerald-200/50">Submitted</span>
+                  <span v-else class="ml-2 px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[10px] font-extrabold border border-blue-200/50">New File</span>
+                </p>
               </div>
               <button
                 class="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors cursor-pointer"
@@ -223,21 +227,22 @@
           </div>
 
           <!-- Submit button -->
-          <div v-if="selectedFiles.length && portalStatus === 'open'" class="mt-6 flex items-center gap-3">
+          <div v-if="portalStatus === 'open'" class="mt-6 flex items-center gap-3">
             <button
               class="flex items-center gap-2 px-6 py-3 bg-[#1e293b] hover:bg-slate-700 text-white font-bold rounded-xl transition-all shadow-md disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
-              :disabled="submitting"
+              :disabled="submitting || !hasChanges"
               @click="submitAssignment"
             >
               <Loader2 v-if="submitting" class="w-4 h-4 animate-spin" />
               <Send v-else class="w-4 h-4" />
-              {{ submitting ? 'Submitting…' : 'Submit Assignment' }}
+              {{ submitButtonText }}
             </button>
             <button
+              v-if="hasChanges"
               class="px-4 py-3 text-sm text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
-              @click="selectedFiles = []"
+              @click="resetSubmissionForm"
             >
-              Clear all
+              Reset changes
             </button>
           </div>
 
@@ -416,7 +421,7 @@ const isLecturer = computed(() => ['lecturer', 'admin'].includes(auth.user?.role
 const loading = ref(true);
 const assignment = ref(null);
 const existingSubmission = ref(null);
-const selectedFiles = ref([]);
+const filesList = ref([]);
 const isDragOver = ref(false);
 const submitting = ref(false);
 const submitSuccess = ref(false);
@@ -439,6 +444,12 @@ onMounted(async () => {
       await fetchSubmissions();
     } else {
       existingSubmission.value = data.submission || null;
+      if (data.submission && data.submission.files) {
+        filesList.value = data.submission.files.map(f => ({
+          ...f,
+          isExisting: true
+        }));
+      }
     }
   } catch (err) {
     console.error('Failed to load assignment:', err);
@@ -601,14 +612,48 @@ function addFiles(files) {
       continue;
     }
     // Avoid duplicates by name
-    if (!selectedFiles.value.find(s => s.name === f.name && s.size === f.size)) {
-      selectedFiles.value.push(f);
+    if (!filesList.value.find(s => s.name === f.name && s.size === f.size)) {
+      filesList.value.push({
+        fileObject: f,
+        name: f.name,
+        size: f.size,
+        isExisting: false
+      });
     }
   }
 }
 
 function removeFile(index) {
-  selectedFiles.value.splice(index, 1);
+  filesList.value.splice(index, 1);
+}
+
+// ── Changes detection ────────────────────────────────────────────────────────
+const hasChanges = computed(() => {
+  if (!existingSubmission.value) {
+    return filesList.value.length > 0;
+  }
+  const existing = existingSubmission.value.files || [];
+  if (filesList.value.length !== existing.length) return true;
+  return filesList.value.some(f => {
+    if (!f.isExisting) return true;
+    return !existing.some(e => e.publicId === f.publicId);
+  });
+});
+
+const submitButtonText = computed(() => {
+  if (submitting.value) return 'Submitting…';
+  return existingSubmission.value ? 'Update Submission' : 'Submit Assignment';
+});
+
+function resetSubmissionForm() {
+  if (existingSubmission.value) {
+    filesList.value = (existingSubmission.value.files || []).map(f => ({
+      ...f,
+      isExisting: true
+    }));
+  } else {
+    filesList.value = [];
+  }
 }
 
 // ── Submit ───────────────────────────────────────────────────────────────────
@@ -620,13 +665,31 @@ async function submitAssignment() {
   try {
     const fd = new FormData();
     fd.append('assignmentId', assignmentId.value);
-    for (const f of selectedFiles.value) {
-      fd.append('files', f);
+    
+    // Separate kept files and new files
+    const keptFiles = filesList.value
+      .filter(f => f.isExisting)
+      .map(f => ({
+        name: f.name,
+        url: f.url,
+        publicId: f.publicId,
+        size: f.size
+      }));
+      
+    fd.append('keepFiles', JSON.stringify(keptFiles));
+
+    for (const f of filesList.value) {
+      if (!f.isExisting && f.fileObject) {
+        fd.append('files', f.fileObject);
+      }
     }
 
     const data = await api.postForm('/api/submissions', fd);
     existingSubmission.value = data.submission;
-    selectedFiles.value = [];
+    filesList.value = (data.submission.files || []).map(f => ({
+      ...f,
+      isExisting: true
+    }));
     submitSuccess.value = true;
   } catch (err) {
     submitError.value = err.message || 'Failed to submit assignment.';

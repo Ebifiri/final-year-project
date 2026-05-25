@@ -31,7 +31,20 @@ router.post('/', protect, upload.array('files', 20), async (req, res) => {
       return res.status(403).json({ message: 'Enroll in this course first' });
     }
 
-    // Check if already submitted → update instead of create
+    // Parse files to keep (if any)
+    let keptFiles = [];
+    if (req.body.keepFiles) {
+      try {
+        keptFiles = JSON.parse(req.body.keepFiles);
+      } catch (e) {
+        if (typeof req.body.keepFiles === 'string') {
+          try {
+            keptFiles = [JSON.parse(req.body.keepFiles)];
+          } catch (_) {}
+        }
+      }
+    }
+
     const files = (req.files || []).map(f => ({
       name:     f.originalname,
       url:      f.path,         // Cloudinary URL (or local path in dev)
@@ -45,9 +58,9 @@ router.post('/', protect, upload.array('files', 20), async (req, res) => {
 
     let submission;
     if (existing) {
-      existing.files = files;  // Replace files on re-submission
-      existing.grade = undefined;  // Reset grade on re-submission
-      existing.feedback = undefined;
+      existing.files = [...keptFiles, ...files];
+      existing.grade = null;  // Reset grade on re-submission
+      existing.feedback = '';
       submission = await existing.save();
     } else {
       submission = await Submission.create({
