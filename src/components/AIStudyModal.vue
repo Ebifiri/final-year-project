@@ -83,7 +83,23 @@
 
             <!-- Quiz -->
             <div v-else-if="result && action === 'quiz' && Array.isArray(result)">
-              <p class="text-xs text-slate-500 mb-4">{{ result.length }} questions generated</p>
+              <div class="mb-6 p-4 rounded-2xl bg-indigo-50 border border-indigo-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <p class="text-xs font-extrabold text-indigo-850 uppercase">Interactive Practice Quiz</p>
+                  <p class="text-xs text-slate-500 mt-1 leading-relaxed">Generate a formal course quiz from this material with MCQs, short answers, timer, and AI evaluation.</p>
+                </div>
+                <button
+                  @click="generateCourseQuiz"
+                  class="flex-shrink-0 flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-md transition-all cursor-pointer disabled:opacity-60"
+                  :disabled="generatingCourseQuiz"
+                >
+                  <Sparkles v-if="!generatingCourseQuiz" class="w-3.5 h-3.5" />
+                  <Loader2 v-else class="w-3.5 h-3.5 animate-spin" />
+                  {{ generatingCourseQuiz ? 'Generating...' : 'Create Course Quiz' }}
+                </button>
+              </div>
+
+              <p class="text-xs text-slate-400 font-bold uppercase tracking-wider mb-4">Quick Practice (In Modal)</p>
               <div v-for="(q, i) in result" :key="i" class="mb-5 p-4 rounded-xl border border-slate-200 bg-slate-50">
                 <p class="text-sm font-semibold text-slate-800 mb-3">{{ i + 1 }}. {{ q.question }}</p>
                 <div class="space-y-1.5">
@@ -155,11 +171,14 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue';
-import { Sparkles, X, FileText, Layers, BookOpen, Copy } from 'lucide-vue-next';
+import { useRouter } from 'vue-router';
+import { Sparkles, X, FileText, Layers, BookOpen, Copy, Loader2 } from 'lucide-vue-next';
 import { api } from '@/api/client.js';
 
 const props  = defineProps({ modelValue: Boolean, resource: Object, initialAction: { type: String, default: '' } });
 const emit   = defineEmits(['update:modelValue']);
+
+const router = useRouter();
 
 const ACTIONS = [
   { id: 'summary',    label: 'Summary',    icon: FileText   },
@@ -174,6 +193,8 @@ const error   = ref('');
 const revealed = ref(new Set());
 const flipped  = ref(new Set());
 const copied   = ref(false);
+const generatingCourseQuiz = ref(false);
+
 
 // Reset when opened with a new resource; auto-run initialAction if provided
 watch(() => props.modelValue, (v) => {
@@ -200,6 +221,20 @@ async function run(act) {
     loading.value = false;
   }
 }
+
+async function generateCourseQuiz() {
+  generatingCourseQuiz.value = true;
+  try {
+    const res = await api.post('/api/quizzes/generate-from-material', { resourceId: props.resource._id });
+    emit('update:modelValue', false);
+    router.push(`/quizzes/${res.quiz._id}`);
+  } catch (err) {
+    alert(err.message || 'Failed to generate quiz.');
+  } finally {
+    generatingCourseQuiz.value = false;
+  }
+}
+
 
 function reveal(i) {
   const s = new Set(revealed.value);

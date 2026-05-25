@@ -4,7 +4,15 @@ const quizAttemptSchema = new mongoose.Schema(
   {
     quizId:      { type: mongoose.Schema.Types.ObjectId, ref: 'Quiz', required: true },
     studentId:   { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    answers:     [{ questionIndex: Number, answer: String }],
+    answers:     [
+      {
+        questionIndex: Number,
+        answer:        String,
+        isCorrect:     Boolean,
+        feedback:      String,
+        pointsEarned:  { type: Number, default: 0 },
+      }
+    ],
     score:       Number,
     totalPoints: Number,
   },

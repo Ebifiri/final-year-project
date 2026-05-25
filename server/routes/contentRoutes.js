@@ -1,4 +1,6 @@
 import express from 'express';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import officeParser from 'officeparser';
 import Course      from '../models/Course.js';
 import Section     from '../models/Section.js';
 import Resource    from '../models/Resource.js';
@@ -6,8 +8,14 @@ import Assignment  from '../models/Assignment.js';
 import Quiz        from '../models/Quiz.js';
 import protect     from '../middleware/auth.js';
 import upload      from '../middleware/upload.js';
-import { getServerFetchUrl, fetchResourceStream } from '../utils/fileAccess.js';
+import { getServerFetchUrl, fetchResourceStream, fetchResourceBuffer } from '../utils/fileAccess.js';
 import { notifyEnrolledStudents } from '../utils/notifyEnrolledStudents.js';
+
+function isOfficeFile(mimeType, filename) {
+  const m = mimeType?.toLowerCase() || '';
+  const f = filename?.toLowerCase() || '';
+  return m.includes('officedocument') || m.includes('ms-word') || m.includes('ms-powerpoint') || f.endsWith('.docx') || f.endsWith('.pptx');
+}
 
 const router = express.Router();
 
@@ -172,7 +180,10 @@ router.post('/:courseCode/sections', protect, async (req, res) => {
 router.post('/sections/:sectionId/resources',
   protect,
   (req, res, next) => {
-    upload.single('file')(req, res, (err) => {
+    upload.fields([
+      { name: 'file', maxCount: 1 },
+      { name: 'quizFiles', maxCount: 10 }
+    ])(req, res, (err) => {
       if (err) return res.status(400).json({ message: err.message || 'File upload failed' });
       next();
     });
@@ -185,7 +196,7 @@ router.post('/sections/:sectionId/resources',
       const allowed = await canManageCourse(req.user._id, req.user.role, section.courseId.code);
       if (!allowed) return res.status(403).json({ message: 'Not authorised' });
 
-      const { title, type, externalUrl, description, assignmentRef, quizRef, opensAt, closesAt } = req.body;
+      const { title, type, externalUrl, description, assignmentRef, quizRef, opensAt, closesAt, totalPoints, generateAI, questionCount } = req.body;
       const count = await Resource.countDocuments({ sectionId: section._id });
 
       const resourceData = {
@@ -201,10 +212,11 @@ router.post('/sections/:sectionId/resources',
         order:         count,
       };
 
-      if (req.file) {
-        resourceData.fileUrl      = req.file.path;
-        resourceData.filePublicId = req.file.filename;
-        resourceData.mimeType     = req.file.mimetype;
+      const file = req.files?.['file']?.[0] || null;
+      if (file) {
+        resourceData.fileUrl      = file.path;
+        resourceData.filePublicId = file.filename;
+        resourceData.mimeType     = file.mimetype;
       }
 
       // Auto-create Assignment/Quiz document if type matches and no ref provided
@@ -216,12 +228,115 @@ router.post('/sections/:sectionId/resources',
           dueDate: closesAt || undefined,
           opensAt: opensAt || undefined,
           closesAt: closesAt || undefined,
+          totalPoints: totalPoints || 100,
           createdBy: req.user._id,
         });
         resourceData.assignmentRef = assignment._id;
       }
 
       if (type === 'quiz' && !quizRef) {
+        let questions = [];
+        const quizFiles = req.files?.['quizFiles'];
+        
+        if (generateAI === 'true' && quizFiles?.length) {
+          const apiKey = process.env.GEMINI_API_KEY;
+          if (!apiKey) {
+            return res.status(503).json({ message: 'AI service not configured — add GEMINI_API_KEY to server/.env' });
+          }
+
+          // Extract content from all uploaded files
+          const fileParts = [];
+          for (const quizFile of quizFiles) {
+            const mimeType = quizFile.mimetype || 'application/pdf';
+            const isOffice = isOfficeFile(mimeType, quizFile.originalname);
+            
+            const { readFile } = await import('fs/promises');
+            const { existsSync } = await import('fs');
+            let buffer;
+            if (quizFile.path.startsWith('http')) {
+              const resp = await fetch(quizFile.path);
+              if (!resp.ok) throw new Error(`Failed to fetch Cloudinary file: ${resp.statusText}`);
+              buffer = Buffer.from(await resp.arrayBuffer());
+            } else {
+              if (!existsSync(quizFile.path)) throw new Error(`File not found: ${quizFile.path}`);
+              buffer = await readFile(quizFile.path);
+            }
+
+            if (isOffice) {
+              try {
+                const ast = await officeParser.parseOffice(buffer);
+                const textContent = ast.toText();
+                fileParts.push({ text: `Study material document (name: "${quizFile.originalname}") text content:\n---\n${textContent}\n---\n` });
+              } catch (parseErr) {
+                console.warn(`[generate-quiz] Failed to parse Office file ${quizFile.originalname}:`, parseErr.message);
+              }
+            } else {
+              fileParts.push({ inlineData: { mimeType, data: buffer.toString('base64') } });
+            }
+          }
+
+          if (fileParts.length > 0) {
+            const genAI = new GoogleGenerativeAI(apiKey);
+            const model = genAI.getGenerativeModel({ model: 'gemini-flash-latest' });
+
+            const qCount = Math.min(20, Math.max(3, parseInt(questionCount) || 8));
+            const mcqCount = Math.max(1, Math.round(qCount * 0.6));
+            const saCount = qCount - mcqCount;
+
+            const prompt = `You are a helpful academic assistant. Based on the uploaded study materials, generate a comprehensive quiz for students.
+The quiz should contain EXACTLY ${qCount} questions:
+- ${mcqCount} multiple-choice questions (type: "mcq")
+- ${saCount} short-answer questions (type: "short_answer")
+
+For MCQ questions:
+- Provide 4 options (A, B, C, D) in the "options" array.
+- The "correctAnswer" should be the exact text of the correct choice.
+- "type" must be "mcq".
+
+For short_answer questions:
+- The "options" array must be empty.
+- The "correctAnswer" should be a detailed, high-quality reference answer/criteria that the grading model will use to evaluate student submissions.
+- "type" must be "short_answer".
+
+All questions must include:
+- "text": The question prompt/text.
+- "points": Point value for this question (default 5 for mcq, 10 for short_answer).
+- "explanation": A brief explanation of what makes a good answer.
+
+Return ONLY a valid JSON array — no explanation, no markdown code fences, just the raw JSON array. Format matching this schema:
+[
+  {
+    "text": "...",
+    "type": "mcq",
+    "options": ["...", "...", "...", "..."],
+    "correctAnswer": "...",
+    "points": 5,
+    "explanation": "..."
+  },
+  {
+    "text": "...",
+    "type": "short_answer",
+    "options": [],
+    "correctAnswer": "...",
+    "points": 10,
+    "explanation": "..."
+  }
+]
+Generate EXACTLY ${qCount} questions.`;
+
+            const result = await model.generateContent([...fileParts, prompt]);
+            const text = result.response.text();
+            
+            try {
+              const clean = text.replace(/```json|```/g, '').trim();
+              questions = JSON.parse(clean);
+            } catch (err) {
+              console.error('Failed to parse AI quiz generation JSON:', text);
+              throw new Error('AI generated quiz in invalid format. Please try again.');
+            }
+          }
+        }
+
         const quiz = await Quiz.create({
           courseId: section.courseId._id,
           title,
@@ -229,7 +344,7 @@ router.post('/sections/:sectionId/resources',
           dueDate: closesAt || undefined,
           opensAt: opensAt || undefined,
           closesAt: closesAt || undefined,
-          questions: [],
+          questions,
           createdBy: req.user._id,
         });
         resourceData.quizRef = quiz._id;

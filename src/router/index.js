@@ -60,6 +60,12 @@ const router = createRouter({
       component: () => import('@/views/dashboard/assignmentSubmission.vue'),
       meta: { requiresAuth: true },
     },
+    {
+      path: '/quizzes/:quizId',
+      name: 'quiz',
+      component: () => import('@/views/dashboard/quizView.vue'),
+      meta: { requiresAuth: true },
+    },
   ],
 })
 

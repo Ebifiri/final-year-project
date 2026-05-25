@@ -235,7 +235,44 @@
                   <div v-else class="flex-shrink-0 w-5" />
 
                   <!-- Clickable file/link area -->
+                  <RouterLink
+                    v-if="res.type === 'assignment' && res.assignmentRef"
+                    :to="'/assignments/' + res.assignmentRef._id + '/submit'"
+                    class="flex items-center gap-3 flex-1 min-w-0"
+                  >
+                    <div :class="['w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0', getResourceMeta(res).bg]">
+                      <component :is="getResourceMeta(res).icon" :class="['w-3.5 h-3.5', getResourceMeta(res).color]" />
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <span class="text-sm text-amber-600 group-hover:text-amber-800 group-hover:underline underline-offset-2 transition-colors leading-snug block truncate font-semibold">
+                        {{ res.title }}
+                      </span>
+                      <span class="text-[10px] text-slate-400 mt-0.5 block">
+                        Assignment &bull; {{ res.assignmentRef.totalPoints || 100 }} marks
+                      </span>
+                    </div>
+                  </RouterLink>
+
+                  <RouterLink
+                    v-else-if="res.type === 'quiz' && res.quizRef"
+                    :to="'/quizzes/' + res.quizRef._id"
+                    class="flex items-center gap-3 flex-1 min-w-0"
+                  >
+                    <div :class="['w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0', getResourceMeta(res).bg]">
+                      <component :is="getResourceMeta(res).icon" :class="['w-3.5 h-3.5', getResourceMeta(res).color]" />
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <span class="text-sm text-orange-600 group-hover:text-orange-800 group-hover:underline underline-offset-2 transition-colors leading-snug block truncate font-semibold">
+                        {{ res.title }}
+                      </span>
+                      <span class="text-[10px] text-slate-400 mt-0.5 block">
+                        Quiz &bull; {{ res.quizRef.durationMinutes || 20 }} mins
+                      </span>
+                    </div>
+                  </RouterLink>
+
                   <a
+                    v-else
                     :href="res.fileUrl || res.externalUrl || '#'"
                     :target="res.fileUrl || res.externalUrl ? '_blank' : undefined"
                     rel="noopener noreferrer"
@@ -262,8 +299,9 @@
 
                   <!-- Right-side actions -->
                   <div class="flex items-center gap-1 flex-shrink-0">
-                    <RouterLink v-if="res.type === 'assignment' && res.assignmentRef" :to="'/assignments/' + res.assignmentRef._id + '/submit'" class="p-1 rounded hover:bg-amber-100 text-amber-500 hover:text-amber-600 transition-all" title="Submit assignment" @click.stop>
-                      <AlertCircle class="w-3.5 h-3.5" />
+                    <RouterLink v-if="res.type === 'assignment' && res.assignmentRef" :to="'/assignments/' + res.assignmentRef._id + '/submit'" class="p-1 rounded hover:bg-amber-100 text-amber-500 hover:text-amber-600 transition-all animate-fade-in" :title="canManage ? 'View submissions' : 'Submit assignment'" @click.stop>
+                      <Users v-if="canManage" class="w-3.5 h-3.5" />
+                      <AlertCircle v-else class="w-3.5 h-3.5" />
                     </RouterLink>
                     <AlertCircle v-else-if="res.type === 'assignment'" class="w-3.5 h-3.5 text-amber-500" />
                     <a v-else-if="res.externalUrl && !res.fileUrl" :href="res.externalUrl" target="_blank" rel="noopener noreferrer" class="p-1 rounded hover:bg-blue-100 text-slate-400 hover:text-blue-600 transition-all" title="Open link" @click.stop>
@@ -391,7 +429,7 @@
             </div>
             <!-- Assignment/Quiz date-time pickers -->
             <template v-if="newResource.type === 'assignment' || newResource.type === 'quiz'">
-              <div class="grid grid-cols-2 gap-3">
+              <div class="grid grid-cols-2 gap-3 mb-3">
                 <div>
                   <label class="text-xs font-semibold text-slate-600 mb-1 block">Opens At</label>
                   <input v-model="newResource.opensAt" type="datetime-local" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
@@ -399,6 +437,37 @@
                 <div>
                   <label class="text-xs font-semibold text-slate-600 mb-1 block">Closes At</label>
                   <input v-model="newResource.closesAt" type="datetime-local" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                </div>
+              </div>
+              
+              <!-- Extra field for assignment marks -->
+              <div v-if="newResource.type === 'assignment'" class="mb-3">
+                <label class="text-xs font-semibold text-slate-600 mb-1 block">Total Marks / Points</label>
+                <input v-model.number="newResource.totalPoints" type="number" min="1" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" placeholder="e.g. 100" />
+              </div>
+
+              <!-- Extra field for AI quiz generation -->
+              <div v-if="newResource.type === 'quiz'" class="mb-3 border-t border-slate-100 pt-3">
+                <label class="flex items-center gap-2 text-xs font-semibold text-slate-600 cursor-pointer">
+                  <input v-model="newResource.generateAI" type="checkbox" class="rounded text-blue-600 focus:ring-blue-400" />
+                  <span>Generate questions using AI</span>
+                </label>
+
+                <div v-if="newResource.generateAI" class="mt-3 space-y-3">
+                  <div>
+                    <label class="text-[11px] font-semibold text-slate-500 mb-1 block">Question Count</label>
+                    <input v-model.number="newResource.questionCount" type="number" min="3" max="20" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                  </div>
+                  <div>
+                    <label class="text-[11px] font-semibold text-slate-500 mb-1 block">Upload Study Materials (PDF, Docx, Pptx)</label>
+                    <input
+                      type="file"
+                      multiple
+                      class="w-full text-xs text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 shadow-xs"
+                      @change="onQuizFilesChange($event)"
+                    />
+                    <p class="text-[9px] text-slate-400 mt-1">Upload up to 10 files to base the quiz questions on.</p>
+                  </div>
                 </div>
               </div>
             </template>
@@ -422,7 +491,7 @@
               />
             </div>
             <!-- File upload -->
-            <div v-else>
+            <div v-else-if="newResource.type !== 'assignment' && !(newResource.type === 'quiz' && newResource.generateAI)">
               <label class="text-xs font-semibold text-slate-600 mb-1 block">File (optional)</label>
               <input
                 type="file"
@@ -527,6 +596,7 @@ import {
   Plus, PlusCircle, FolderOpen, ExternalLink, Trash2, Package,
   Presentation, FileSpreadsheet, FileCode2, FileImage, Music,
   Archive, Download, File, CheckSquare, Sparkles, Check, AlertTriangle,
+  Users,
 } from 'lucide-vue-next';
 import AIStudyModal from '@/components/AIStudyModal.vue';
 import { api }                   from '@/api/client.js';
@@ -824,14 +894,18 @@ async function saveSection() {
 const showAddResource = ref(false);
 const savingResource  = ref(false);
 const activeSection   = ref(null);
-const newResource     = ref({ title: '', type: 'other', externalUrl: '', description: '', file: null, opensAt: '', closesAt: '' });
+const newResource     = ref({ title: '', type: 'other', externalUrl: '', description: '', file: null, opensAt: '', closesAt: '', totalPoints: 100, generateAI: false, questionCount: 8, quizFiles: [] });
 const resourceUploadError = ref('');
 
 function openAddResource(sec) {
   activeSection.value  = sec;
-  newResource.value    = { title: '', type: 'other', externalUrl: '', description: '', file: null, opensAt: '', closesAt: '' };
+  newResource.value    = { title: '', type: 'other', externalUrl: '', description: '', file: null, opensAt: '', closesAt: '', totalPoints: 100, generateAI: false, questionCount: 8, quizFiles: [] };
   resourceUploadError.value = '';
   showAddResource.value = true;
+}
+
+function onQuizFilesChange(e) {
+  newResource.value.quizFiles = Array.from(e.target.files || []);
 }
 
 // Client-side file validation
@@ -868,6 +942,14 @@ async function saveResource() {
     if (newResource.value.file)        fd.append('file', newResource.value.file);
     if (newResource.value.opensAt)     fd.append('opensAt', new Date(newResource.value.opensAt).toISOString());
     if (newResource.value.closesAt)    fd.append('closesAt', new Date(newResource.value.closesAt).toISOString());
+    if (newResource.value.totalPoints)  fd.append('totalPoints', newResource.value.totalPoints);
+    if (newResource.value.generateAI)   fd.append('generateAI', newResource.value.generateAI);
+    if (newResource.value.questionCount) fd.append('questionCount', newResource.value.questionCount);
+    if (newResource.value.quizFiles?.length) {
+      for (const f of newResource.value.quizFiles) {
+        fd.append('quizFiles', f);
+      }
+    }
 
     await api.postForm(`/api/content/sections/${activeSection.value._id}/resources`, fd);
     showAddResource.value = false;

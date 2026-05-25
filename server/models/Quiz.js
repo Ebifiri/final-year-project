@@ -2,8 +2,8 @@ import mongoose from 'mongoose';
 
 const questionSchema = new mongoose.Schema({
   text:          { type: String, required: true },
-  type:          { type: String, enum: ['mcq', 'true_false'], required: true },
-  options:       [String],         // ['A', 'B', 'C', 'D'] for MCQ; empty for T/F
+  type:          { type: String, enum: ['mcq', 'true_false', 'short_answer'], required: true },
+  options:       [String],         // ['A', 'B', 'C', 'D'] for MCQ; empty for T/F or short_answer
   correctAnswer: { type: String, required: true },
   points:        { type: Number, default: 1 },
 });
