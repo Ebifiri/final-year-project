@@ -473,16 +473,14 @@ const SidebarContents = defineComponent({
                 h('div', { class: 'px-3 mb-2' }, [
                   h('h4', { class: 'text-xs font-bold text-slate-400 uppercase tracking-wider' }, 'My Courses'),
                 ]),
-                h('div', { class: 'space-y-1' }, [
-                  ...enrollmentStore.enrollments.slice(0, 5).map(e =>
+                h('div', { class: 'space-y-1' }, enrollmentStore.enrollments.slice(0, 5).map(e =>
                     h(RouterLink, {
                       key: e._id,
                       to: `/courses/${e.course?.code}`,
                       onClick: props.onClose,
                       class: 'w-full flex items-center gap-3 pl-10 px-3 py-2.5 rounded-lg text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all',
                     }, () => [h(MonitorPlay, { class: 'w-4 h-4 text-slate-400' }), h('span', { class: 'truncate' }, e.course?.code ?? '')])
-                  ),
-                ]),
+                  )),
               ]),
 
               // Footer

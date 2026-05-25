@@ -44,7 +44,7 @@
 
     <template v-else>
       <!-- Hero Banner -->
-      <div class="bg-gradient-to-br from-amber-500 via-orange-500 to-red-500 text-white px-4 sm:px-6 lg:px-10 pt-6 sm:pt-8 pb-6 sm:pb-8">
+      <div class="relative bg-gradient-to-br from-amber-500 via-orange-500 to-red-500 text-white px-4 sm:px-6 lg:px-10 pt-6 sm:pt-8 pb-6 sm:pb-8">
         <div class="absolute inset-0 bg-linear-to-br from-black/10 to-black/30"></div>
         <div class="relative max-w-4xl mx-auto">
           <button @click="goBackToCourse" class="flex items-center gap-1 text-white/70 hover:text-white text-xs font-medium mb-3 transition-colors cursor-pointer">
@@ -100,6 +100,33 @@
 
         <!-- Student View -->
         <template v-if="!isLecturer">
+          <!-- Prominent Deadline Info -->
+          <div 
+            v-if="portalStatus === 'open'" 
+            :class="[
+              'mb-6 p-5 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm transition-all duration-300',
+              deadlineSeverityClass
+            ]"
+          >
+            <div class="flex items-center gap-3">
+              <div :class="['w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0', deadlineIconBgClass]">
+                <Clock :class="['w-5 h-5', deadlineIconClass]" />
+              </div>
+              <div>
+                <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">Submission Deadline</p>
+                <p class="text-base sm:text-lg font-extrabold text-slate-900 mt-0.5">
+                  {{ formatDate(assignment.closesAt || assignment.dueDate) }}
+                </p>
+              </div>
+            </div>
+            <div 
+              v-if="timeRemainingLabel" 
+              :class="['text-xs sm:text-sm font-extrabold px-4 py-2 rounded-xl self-start sm:self-auto shadow-xs', deadlineBadgeClass]"
+            >
+              {{ timeRemainingLabel }}
+            </div>
+          </div>
+
           <!-- Previous Submission -->
           <div v-if="existingSubmission" class="mb-6 p-5 bg-white rounded-2xl border border-slate-200 shadow-sm">
             <div class="flex items-center gap-3 mb-3">
@@ -483,6 +510,74 @@ const statusIcon = computed(() => {
   if (portalStatus.value === 'open') return CheckCircle;
   if (portalStatus.value === 'not-open') return Clock;
   return XCircle;
+});
+
+// ── Deadline Remaining & Severity ───────────────────────────────────────────
+const timeRemainingLabel = computed(() => {
+  if (!assignment.value) return '';
+  const closesAt = assignment.value.closesAt || assignment.value.dueDate;
+  if (!closesAt) return '';
+  
+  const diff = new Date(closesAt) - new Date();
+  if (diff <= 0) return 'Deadline passed';
+  
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+  if (hours < 24) {
+    const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    if (hours === 0) {
+      return `Closes in ${mins} minute${mins !== 1 ? 's' : ''}!`;
+    }
+    return `Closes in ${hours} hour${hours !== 1 ? 's' : ''} ${mins} min${mins !== 1 ? 's' : ''}!`;
+  }
+  
+  const days = Math.floor(hours / 24);
+  const remainingHours = hours % 24;
+  if (days === 1) {
+    return `Closes in 1 day ${remainingHours} hour${remainingHours !== 1 ? 's' : ''}`;
+  }
+  return `Closes in ${days} days`;
+});
+
+const deadlineSeverity = computed(() => {
+  if (!assignment.value) return 'normal';
+  const closesAt = assignment.value.closesAt || assignment.value.dueDate;
+  if (!closesAt) return 'normal';
+  
+  const diff = new Date(closesAt) - new Date();
+  if (diff <= 0) return 'expired';
+  
+  const hoursLeft = diff / (1000 * 60 * 60);
+  if (hoursLeft <= 24) return 'danger';
+  if (hoursLeft <= 72) return 'warning';
+  return 'normal';
+});
+
+const deadlineSeverityClass = computed(() => {
+  const sev = deadlineSeverity.value;
+  if (sev === 'danger') return 'bg-red-50 border-red-200 text-red-900';
+  if (sev === 'warning') return 'bg-amber-50 border-amber-200 text-amber-900';
+  return 'bg-blue-50/60 border-blue-200 text-blue-900';
+});
+
+const deadlineIconBgClass = computed(() => {
+  const sev = deadlineSeverity.value;
+  if (sev === 'danger') return 'bg-red-100';
+  if (sev === 'warning') return 'bg-amber-100';
+  return 'bg-blue-100';
+});
+
+const deadlineIconClass = computed(() => {
+  const sev = deadlineSeverity.value;
+  if (sev === 'danger') return 'text-red-600';
+  if (sev === 'warning') return 'text-amber-600';
+  return 'text-blue-600';
+});
+
+const deadlineBadgeClass = computed(() => {
+  const sev = deadlineSeverity.value;
+  if (sev === 'danger') return 'bg-red-100 text-red-800 border border-red-200 animate-pulse';
+  if (sev === 'warning') return 'bg-amber-100 text-amber-800 border border-amber-200';
+  return 'bg-blue-100 text-blue-800 border border-blue-200';
 });
 
 // ── File handling ────────────────────────────────────────────────────────────

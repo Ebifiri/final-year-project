@@ -864,7 +864,7 @@ async function downloadSingle(resource) {
 
     const blob     = await res.blob();
     const blobUrl  = URL.createObjectURL(blob);
-    const basename = resource.fileUrl?.split('?')[0].split(/[\/\\]/).pop() ?? '';
+    const basename = resource.fileUrl?.split('?')[0].split(/[/\\]/).pop() ?? '';
     const ext      = basename.includes('.') ? '.' + basename.split('.').pop() : '';
     const filename = resource.title + ext;
 
