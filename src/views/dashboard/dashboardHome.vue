@@ -246,12 +246,14 @@
             <button
               v-for="day in daysInMonth"
               :key="day"
-              :class="['mx-auto w-7 h-7 rounded-full text-xs flex items-center justify-center transition-colors', isToday(day) ? 'bg-[#1e293b] text-white font-bold' : hasDue(day) ? 'bg-blue-100 text-blue-700 font-semibold hover:bg-blue-200' : 'text-slate-600 hover:bg-slate-100']"
+              :class="['mx-auto w-7 h-7 rounded-full text-xs flex items-center justify-center transition-colors', dayClass(day)]"
             >{{ day }}</button>
           </div>
-          <div class="flex gap-3 mt-3 text-[11px] text-slate-500">
-            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-[#1e293b] inline-block"></span>Today</span>
-            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-blue-200 inline-block"></span>Due</span>
+          <div class="grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-slate-100 text-[11px] text-slate-500">
+            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-[#1e293b] inline-block"></span>Today</span>
+            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-red-400 inline-block"></span>Urgent / Quiz</span>
+            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block"></span>Medium</span>
+            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-green-400 inline-block"></span>Low Priority</span>
           </div>
         </section>
 
@@ -309,7 +311,10 @@ onMounted(async () => {
   if (isLecturer.value) {
     await fetchLecturerCourses();
   } else {
-    enrollmentStore.fetchEnrollments();
+    await Promise.all([
+      enrollmentStore.fetchEnrollments(),
+      fetchDeadlines()
+    ]);
   }
 });
 
@@ -412,6 +417,51 @@ function nextMonth() {
 // ── Tasks (empty by default) ──────────────────────────────────────────────────
 const tasks = ref([]);
 
+async function fetchDeadlines() {
+  try {
+    const data = await api.get('/api/users/deadlines');
+    tasks.value = (data.deadlines || []).map(d => ({
+      id: d._id,
+      title: d.title,
+      course: `${d.courseCode} — ${d.courseTitle}`,
+      urgency: d.urgency, // 'high', 'medium', 'low'
+      rawDate: d.dueDate || d.closesAt,
+      type: d.type, // 'assignment' or 'quiz'
+    }));
+  } catch (err) {
+    console.error('Failed to fetch deadlines:', err);
+  }
+}
+
+function getDayTasks(day) {
+  return tasks.value.filter(t => {
+    if (!t.rawDate) return false;
+    const d = new Date(t.rawDate);
+    return d.getDate() === day &&
+           d.getMonth() === currentMonth.value &&
+           d.getFullYear() === currentYear.value;
+  });
+}
+
+function dayClass(day) {
+  if (isToday(day)) {
+    return 'bg-[#1e293b] text-white font-bold';
+  }
+  
+  const dayTasks = getDayTasks(day);
+  if (dayTasks.length === 0) {
+    return 'text-slate-600 hover:bg-slate-100';
+  }
+  
+  if (dayTasks.some(t => t.urgency === 'high')) {
+    return 'bg-red-100 text-red-700 font-bold hover:bg-red-200 border border-red-200';
+  }
+  if (dayTasks.some(t => t.urgency === 'medium')) {
+    return 'bg-amber-100 text-amber-700 font-bold hover:bg-amber-200 border border-amber-200';
+  }
+  return 'bg-green-100 text-green-700 font-bold hover:bg-green-200 border border-green-200';
+}
+
 const urgencyRing = {
   high:   'ring-red-400   bg-red-400',
   medium: 'ring-amber-400 bg-amber-400',
@@ -424,7 +474,14 @@ const urgencyBadge = {
 };
 
 function formatDate(raw) {
-  return new Date(raw).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  if (!raw) return '';
+  return new Date(raw).toLocaleString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 
 function formatRelative(dateStr) {

@@ -26,6 +26,7 @@ const notificationSchema = new mongoose.Schema(
     link:      { type: String, default: '' },   // frontend route, e.g. /courses/CSC101
     read:      { type: Boolean, default: false },
     emailSent: { type: Boolean, default: false },
+    dueDate:   Date,
   },
   { timestamps: true }
 );

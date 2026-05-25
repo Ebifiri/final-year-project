@@ -50,6 +50,7 @@ export async function notifyEnrolledStudents({
   title,
   body = '',
   resourceId = null,
+  dueDate = null,
 }) {
   try {
     // 1. Find all students enrolled in this course
@@ -71,6 +72,7 @@ export async function notifyEnrolledStudents({
       link,
       read:      false,
       emailSent: false,
+      dueDate:   dueDate || undefined,
     }));
 
     const inserted = await Notification.insertMany(notifDocs);

@@ -65,8 +65,11 @@
             <span v-if="assignment.totalPoints" class="flex items-center gap-1 px-3 py-1 rounded-full bg-white/15 text-xs font-medium text-white backdrop-blur-sm">
               <Award class="w-3.5 h-3.5" /> {{ assignment.totalPoints }} points
             </span>
+            <span v-if="assignment.opensAt" class="flex items-center gap-1 px-3 py-1 rounded-full bg-white/15 text-xs font-medium text-white backdrop-blur-sm">
+              <Clock class="w-3.5 h-3.5" /> Opens: {{ formatDate(assignment.opensAt) }}
+            </span>
             <span v-if="assignment.closesAt || assignment.dueDate" class="flex items-center gap-1 px-3 py-1 rounded-full bg-white/15 text-xs font-medium text-white backdrop-blur-sm">
-              <Clock class="w-3.5 h-3.5" /> Due {{ formatDate(assignment.closesAt || assignment.dueDate) }}
+              <Clock class="w-3.5 h-3.5" /> Closes: {{ formatDate(assignment.closesAt || assignment.dueDate) }}
             </span>
             <span :class="['flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold backdrop-blur-sm', statusClass]">
               <component :is="statusIcon" class="w-3.5 h-3.5" />

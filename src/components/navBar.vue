@@ -131,7 +131,7 @@
                           <!-- Type icon -->
                           <div
                             class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5"
-                            :class="notifIconClass(n.type)"
+                            :class="notifIconClass(n.type, n.dueDate)"
                           >
                             <component :is="notifIcon(n.type)" class="w-4 h-4" />
                           </div>
@@ -262,12 +262,24 @@ function notifIcon(type) {
   const map = { resource: FileText, assignment: ClipboardList, quiz: HelpCircle, announcement: Megaphone };
   return map[type] || Bell;
 }
-function notifIconClass(type) {
+function notifIconClass(type, dueDate) {
+  if (type === 'quiz') {
+    return 'bg-red-50 text-red-600 border border-red-100 font-semibold';
+  }
+  if (type === 'assignment') {
+    if (!dueDate) return 'bg-emerald-50 text-emerald-600 border border-emerald-100';
+    const hoursLeft = (new Date(dueDate) - new Date()) / (1000 * 60 * 60);
+    if (hoursLeft <= 24) {
+      return 'bg-red-50 text-red-600 border border-red-200 font-semibold animate-pulse';
+    } else if (hoursLeft <= 72) {
+      return 'bg-amber-50 text-amber-600 border border-amber-200';
+    } else {
+      return 'bg-emerald-50 text-emerald-600 border border-emerald-100';
+    }
+  }
   const map = {
-    resource:     'bg-blue-50 text-blue-600',
-    assignment:   'bg-amber-50 text-amber-600',
-    quiz:         'bg-emerald-50 text-emerald-600',
-    announcement: 'bg-violet-50 text-violet-600',
+    resource:     'bg-blue-50 text-blue-600 border border-blue-50',
+    announcement: 'bg-violet-50 text-violet-600 border border-violet-50',
   };
   return map[type] || 'bg-slate-100 text-slate-500';
 }

@@ -61,6 +61,7 @@ router.post('/', protect, async (req, res) => {
       type:       'assignment',
       title:      `New assignment: ${title}`,
       body:       dueDate ? `Due: ${new Date(dueDate).toLocaleDateString()}` : '',
+      dueDate:    closesAt || dueDate || undefined,
     });
 
     res.status(201).json({ assignment });

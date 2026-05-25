@@ -353,7 +353,8 @@ Generate EXACTLY ${qCount} questions.`;
       const resource = await Resource.create(resourceData);
 
       // ── Notify enrolled students ──────────────────────────────────────────
-      const notifType = type === 'announcement' ? 'announcement' : 'resource';
+      const notifType = ['announcement', 'assignment', 'quiz'].includes(type) ? type : 'resource';
+      const notifDueDate = (type === 'assignment' || type === 'quiz') ? (closesAt || req.body.dueDate) : null;
       notifyEnrolledStudents({
         courseId:   section.courseId._id,
         courseCode: section.courseId.code,
@@ -364,6 +365,7 @@ Generate EXACTLY ${qCount} questions.`;
           : `New ${type}: ${title} from ${section.courseId.code}`,
         body:       description || '',
         resourceId: resource._id,
+        dueDate:    notifDueDate || undefined,
       });
 
       res.status(201).json({ resource });

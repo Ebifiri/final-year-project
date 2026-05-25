@@ -250,6 +250,11 @@
                       <span class="text-[10px] text-slate-400 mt-0.5 block">
                         Assignment &bull; {{ res.assignmentRef.totalPoints || 100 }} marks
                       </span>
+                      <span v-if="res.assignmentRef.opensAt || res.assignmentRef.closesAt" class="text-[10px] text-slate-500 mt-0.5 block">
+                        <span v-if="res.assignmentRef.opensAt">Opens: {{ formatDateTime(res.assignmentRef.opensAt) }}</span>
+                        <span v-if="res.assignmentRef.opensAt && res.assignmentRef.closesAt" class="mx-1.5">&bull;</span>
+                        <span v-if="res.assignmentRef.closesAt">Closes: {{ formatDateTime(res.assignmentRef.closesAt) }}</span>
+                      </span>
                     </div>
                   </RouterLink>
 
@@ -301,7 +306,7 @@
                   <div class="flex items-center gap-1 flex-shrink-0">
                     <RouterLink v-if="res.type === 'assignment' && res.assignmentRef" :to="'/assignments/' + res.assignmentRef._id + '/submit'" class="p-1 rounded hover:bg-amber-100 text-amber-500 hover:text-amber-600 transition-all animate-fade-in" :title="canManage ? 'View submissions' : 'Submit assignment'" @click.stop>
                       <Users v-if="canManage" class="w-3.5 h-3.5" />
-                      <AlertCircle v-else class="w-3.5 h-3.5" />
+                      <Upload v-else class="w-3.5 h-3.5" />
                     </RouterLink>
                     <AlertCircle v-else-if="res.type === 'assignment'" class="w-3.5 h-3.5 text-amber-500" />
                     <a v-else-if="res.externalUrl && !res.fileUrl" :href="res.externalUrl" target="_blank" rel="noopener noreferrer" class="p-1 rounded hover:bg-blue-100 text-slate-400 hover:text-blue-600 transition-all" title="Open link" @click.stop>
@@ -596,7 +601,7 @@ import {
   Plus, PlusCircle, FolderOpen, ExternalLink, Trash2, Package,
   Presentation, FileSpreadsheet, FileCode2, FileImage, Music,
   Archive, Download, File, CheckSquare, Sparkles, Check, AlertTriangle,
-  Users,
+  Users, Upload,
 } from 'lucide-vue-next';
 import AIStudyModal from '@/components/AIStudyModal.vue';
 import { api }                   from '@/api/client.js';
@@ -865,6 +870,18 @@ function formatDate(iso) {
   if (!iso) return '';
   const d = new Date(iso);
   return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function formatDateTime(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return d.toLocaleString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 
 // ── Add Section modal ─────────────────────────────────────────────────────────

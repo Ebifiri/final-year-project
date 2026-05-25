@@ -70,6 +70,7 @@ router.post('/', protect, async (req, res) => {
       type:       'quiz',
       title:      `New quiz: ${title}`,
       body:       dueDate ? `Due: ${new Date(dueDate).toLocaleDateString()}` : '',
+      dueDate:    closesAt || dueDate || undefined,
     });
 
     res.status(201).json({ quiz });
