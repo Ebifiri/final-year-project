@@ -17,6 +17,7 @@ const quizSchema = new mongoose.Schema(
     opensAt:         Date,
     closesAt:        Date,
     durationMinutes: { type: Number, default: 20 },
+    showCorrectAnswers: { type: Boolean, default: true },
     questions:       [questionSchema],
     createdBy:       { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   },

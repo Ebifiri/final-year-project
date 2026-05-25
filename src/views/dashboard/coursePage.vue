@@ -469,6 +469,14 @@
                 <input v-model.number="newResource.durationMinutes" type="number" min="1" max="300" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" placeholder="e.g. 15" />
               </div>
 
+              <!-- Show correct answers checkbox -->
+              <div v-if="newResource.type === 'quiz'" class="mb-3">
+                <label class="flex items-center gap-2 text-xs font-semibold text-slate-600 cursor-pointer">
+                  <input v-model="newResource.showCorrectAnswers" type="checkbox" class="rounded text-blue-600 focus:ring-blue-400" />
+                  <span>Show correct answers to students after completion</span>
+                </label>
+              </div>
+
               <!-- Extra field for AI quiz generation -->
               <div v-if="newResource.type === 'quiz'" class="mb-3 border-t border-slate-100 pt-3">
                 <label class="flex items-center gap-2 text-xs font-semibold text-slate-600 cursor-pointer">
@@ -929,12 +937,12 @@ async function saveSection() {
 const showAddResource = ref(false);
 const savingResource  = ref(false);
 const activeSection   = ref(null);
-const newResource     = ref({ title: '', type: 'other', externalUrl: '', description: '', file: null, opensAt: '', closesAt: '', totalPoints: 100, generateAI: false, questionCount: 8, quizFiles: [], durationMinutes: 20 });
+const newResource     = ref({ title: '', type: 'other', externalUrl: '', description: '', file: null, opensAt: '', closesAt: '', totalPoints: 100, generateAI: false, questionCount: 8, quizFiles: [], durationMinutes: 20, showCorrectAnswers: true });
 const resourceUploadError = ref('');
 
 function openAddResource(sec) {
   activeSection.value  = sec;
-  newResource.value    = { title: '', type: 'other', externalUrl: '', description: '', file: null, opensAt: '', closesAt: '', totalPoints: 100, generateAI: false, questionCount: 8, quizFiles: [], durationMinutes: 20 };
+  newResource.value    = { title: '', type: 'other', externalUrl: '', description: '', file: null, opensAt: '', closesAt: '', totalPoints: 100, generateAI: false, questionCount: 8, quizFiles: [], durationMinutes: 20, showCorrectAnswers: true };
   resourceUploadError.value = '';
   showAddResource.value = true;
 }
@@ -986,6 +994,9 @@ async function saveResource() {
       }
     }
     if (newResource.value.durationMinutes) fd.append('durationMinutes', newResource.value.durationMinutes);
+    if (newResource.value.type === 'quiz') {
+      fd.append('showCorrectAnswers', newResource.value.showCorrectAnswers);
+    }
 
     await api.postForm(`/api/content/sections/${activeSection.value._id}/resources`, fd);
     showAddResource.value = false;

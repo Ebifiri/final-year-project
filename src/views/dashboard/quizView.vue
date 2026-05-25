@@ -234,7 +234,7 @@
 
             <!-- Short Answer Mode: Model Answer & AI Feedback -->
             <template v-else-if="q.type === 'short_answer'">
-              <div class="p-3 bg-indigo-50/40 rounded-xl border border-indigo-100/50">
+              <div v-if="q.correctAnswer" class="p-3 bg-indigo-50/40 rounded-xl border border-indigo-100/50">
                 <p class="text-[10px] text-indigo-500 font-bold uppercase tracking-wider">Model Answer / Criteria</p>
                 <p class="text-xs font-medium text-slate-700 mt-1 whitespace-pre-wrap">
                   {{ q.correctAnswer }}

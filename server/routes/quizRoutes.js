@@ -25,19 +25,21 @@ router.get('/:id', protect, async (req, res) => {
       if (!enrolled) return res.status(403).json({ message: 'Enroll in this course first' });
     }
 
-    // Strip correct answers for students
+    // Strip correct answers for students unless they have completed it AND showCorrectAnswers is true
     const quizData = quiz.toObject();
-    if (req.user.role === 'student') {
-      quizData.questions = quizData.questions.map(q => {
-        const { correctAnswer, ...rest } = q;
-        return rest;
-      });
-    }
-
-    // Attach attempt if already taken
     const attempt = await QuizAttempt.findOne({
       quizId: quiz._id, studentId: req.user._id,
     });
+
+    if (req.user.role === 'student') {
+      const canSeeAnswers = quiz.showCorrectAnswers && !!attempt;
+      if (!canSeeAnswers) {
+        quizData.questions = quizData.questions.map(q => {
+          const { correctAnswer, ...rest } = q;
+          return rest;
+        });
+      }
+    }
 
     res.json({ quiz: quizData, attempt: attempt || null });
   } catch (err) {
@@ -52,13 +54,14 @@ router.post('/', protect, async (req, res) => {
     if (!['lecturer', 'admin'].includes(req.user.role)) {
       return res.status(403).json({ message: 'Not authorised' });
     }
-    const { courseCode, title, description, dueDate, durationMinutes, questions, opensAt, closesAt } = req.body;
+    const { courseCode, title, description, dueDate, durationMinutes, questions, opensAt, closesAt, showCorrectAnswers } = req.body;
     const course = await Course.findOne({ code: courseCode?.toUpperCase() });
     if (!course) return res.status(404).json({ message: 'Course not found' });
 
     const quiz = await Quiz.create({
       courseId: course._id, title, description, dueDate, durationMinutes,
       opensAt: opensAt || undefined, closesAt: closesAt || undefined,
+      showCorrectAnswers: showCorrectAnswers !== false,
       questions, createdBy: req.user._id,
     });
 
@@ -229,12 +232,20 @@ router.post('/attempts', protect, async (req, res) => {
         const isMatch = studentAnswer.trim().toLowerCase() === q.correctAnswer.trim().toLowerCase();
         const pointsEarned = isMatch ? (q.points || 5) : 0;
         score += pointsEarned;
+
+        let feedback = 'Incorrect.';
+        if (isMatch) {
+          feedback = 'Correct!';
+        } else if (quiz.showCorrectAnswers) {
+          feedback = `Incorrect. The correct answer was: ${q.correctAnswer}`;
+        }
+
         answersWithGrades.push({
           questionIndex: idx,
           answer: studentAnswer,
           isCorrect: isMatch,
           pointsEarned,
-          feedback: isMatch ? 'Correct!' : `Incorrect. The correct answer was: ${q.correctAnswer}`
+          feedback
         });
       } else if (q.type === 'short_answer') {
         if (!studentAnswer.trim()) {

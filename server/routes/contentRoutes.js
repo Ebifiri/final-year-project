@@ -337,6 +337,7 @@ Generate EXACTLY ${qCount} questions.`;
           }
         }
 
+        const showCorrectAnswers = req.body.showCorrectAnswers !== 'false';
         const quiz = await Quiz.create({
           courseId: section.courseId._id,
           title,
@@ -345,6 +346,7 @@ Generate EXACTLY ${qCount} questions.`;
           opensAt: opensAt || undefined,
           closesAt: closesAt || undefined,
           durationMinutes: parseInt(durationMinutes) || 20,
+          showCorrectAnswers,
           questions,
           createdBy: req.user._id,
         });
