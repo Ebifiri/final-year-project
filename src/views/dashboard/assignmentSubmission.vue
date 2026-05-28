@@ -398,9 +398,12 @@ import {
 } from 'lucide-vue-next';
 import { api } from '@/api/client.js';
 import { useAuthStore } from '@/stores/auth.js';
+import { useToastStore } from '@/stores/toast.js';
 
 const route = useRoute();
 const router = useRouter();
+const auth = useAuthStore();
+const toastStore = useToastStore();
 const assignmentId = computed(() => route.params.assignmentId);
 
 function goBackToCourse() {
@@ -409,7 +412,6 @@ function goBackToCourse() {
   else router.back();
 }
 
-const auth = useAuthStore();
 const isLecturer = computed(() => ['lecturer', 'admin'].includes(auth.user?.role));
 
 const loading = ref(true);
@@ -484,9 +486,9 @@ async function submitGrade() {
       submissions.value[idx] = { ...submissions.value[idx], ...res.submission };
     }
     selectedSubmission.value = { ...selectedSubmission.value, ...res.submission };
-    alert('Grade submitted successfully!');
+    toastStore.addToast({ message: 'Grade submitted successfully!', type: 'success' });
   } catch (err) {
-    alert(err.message || 'Failed to submit grade.');
+    toastStore.addToast({ message: err.message || 'Failed to submit grade.', type: 'error' });
   } finally {
     grading.value = false;
   }

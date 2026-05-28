@@ -174,11 +174,13 @@ import { ref, computed, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { Sparkles, X, FileText, Layers, BookOpen, Copy, Loader2 } from 'lucide-vue-next';
 import { api } from '@/api/client.js';
+import { useToastStore } from '@/stores/toast.js';
 
 const props  = defineProps({ modelValue: Boolean, resource: Object, initialAction: { type: String, default: '' } });
 const emit   = defineEmits(['update:modelValue']);
 
 const router = useRouter();
+const toastStore = useToastStore();
 
 const ACTIONS = [
   { id: 'summary',    label: 'Summary',    icon: FileText   },
@@ -229,7 +231,7 @@ async function generateCourseQuiz() {
     emit('update:modelValue', false);
     router.push(`/quizzes/${res.quiz._id}`);
   } catch (err) {
-    alert(err.message || 'Failed to generate quiz.');
+    toastStore.addToast({ message: err.message || 'Failed to generate quiz.', type: 'error' });
   } finally {
     generatingCourseQuiz.value = false;
   }

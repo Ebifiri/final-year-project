@@ -2,6 +2,7 @@
 import NavBar    from './components/navBar.vue';
 import AppFooter from './components/footer.vue';
 import AIStudyModal from './components/AIStudyModal.vue';
+import ToastContainer from './components/ToastContainer.vue';
 import { computed, ref, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { Download, X, Trash2, Loader2, CheckSquare, Clock, Sparkles } from 'lucide-vue-next';
@@ -237,7 +238,8 @@ async function downloadAll() {
 
   <!-- AI Study Modal from cart -->
   <AIStudyModal v-model="showCartAI" :resource="cartAIItem" />
+  
+  <ToastContainer />
 </template>
 
 <style scoped></style>
-

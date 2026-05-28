@@ -169,6 +169,21 @@
         </div>
       </div>
 
+    <!-- Confirm Submit Modal -->
+    <div v-if="showConfirmModal" class="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+      <div class="bg-white rounded-3xl p-6 md:p-8 max-w-sm w-full shadow-2xl">
+        <div class="w-12 h-12 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mb-4 mx-auto">
+          <AlertCircle class="w-6 h-6" />
+        </div>
+        <h3 class="text-xl font-bold text-center text-slate-800 mb-2">Submit Quiz?</h3>
+        <p class="text-sm text-center text-slate-500 mb-6">Are you sure you want to submit your answers? You cannot undo this action.</p>
+        <div class="flex gap-3">
+          <button @click="showConfirmModal = false" class="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors">Cancel</button>
+          <button @click="confirmSubmitQuiz" class="flex-1 py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl transition-colors">Submit</button>
+        </div>
+      </div>
+    </div>
+
       <!-- STATE 3: GRADING SCREEN (DURING SUBMISSION) -->
       <div v-else-if="state === 'grading'" class="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
         <div class="w-16 h-16 rounded-2xl bg-indigo-50 flex items-center justify-center mb-4 relative">
@@ -319,9 +334,11 @@ import {
 } from 'lucide-vue-next';
 import { api } from '@/api/client.js';
 import { useAuthStore } from '@/stores/auth.js';
+import { useToastStore } from '@/stores/toast.js';
 
 const route = useRoute();
 const auth = useAuthStore();
+const toastStore = useToastStore();
 const canManage = computed(() => ['lecturer', 'admin'].includes(auth.user?.role));
 const allAttempts = ref([]);
 
@@ -334,6 +351,7 @@ const attempt = ref(null);
 const state = ref('intro'); // 'intro' | 'active' | 'grading' | 'results'
 const answers = ref({}); // questionIndex -> answer
 const timeRemaining = ref(0);
+const showConfirmModal = ref(false);
 let timerInterval = null;
 
 // Total points possible computed locally
@@ -388,9 +406,12 @@ function formatTime(sec) {
 }
 
 function submitQuizPrompt() {
-  if (confirm('Are you sure you want to submit this quiz?')) {
-    submitQuiz(false);
-  }
+  showConfirmModal.value = true;
+}
+
+function confirmSubmitQuiz() {
+  showConfirmModal.value = false;
+  submitQuiz(false);
 }
 
 async function submitQuiz(isTimeout = false) {
@@ -409,9 +430,10 @@ async function submitQuiz(isTimeout = false) {
     });
     attempt.value = res.attempt;
     state.value = 'results';
+    if (!isTimeout) toastStore.addToast({ message: 'Quiz submitted successfully!', type: 'success' });
   } catch (err) {
     console.error('Failed to submit quiz attempt:', err);
-    alert(err.message || 'Failed to submit quiz. Please try again.');
+    toastStore.addToast({ message: err.message || 'Failed to submit quiz. Please try again.', type: 'error' });
     state.value = 'active';
     startQuiz(); // restart timer
   }
