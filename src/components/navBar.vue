@@ -205,7 +205,7 @@ import {
   LayoutDashboard, Home as HomeIcon,
   Calendar, BookMarked, MonitorPlay, Shield,
   X, Settings, LogOut, Sparkles,
-  FileText, ClipboardList, HelpCircle, Megaphone,
+  FileText, ClipboardList, HelpCircle, Megaphone, Award,
 } from 'lucide-vue-next';
 import { useAuthStore }         from '@/stores/auth.js';
 import { useEnrollmentStore }   from '@/stores/enrollments.js';
@@ -467,6 +467,7 @@ const SidebarContents = defineComponent({
                   h(RouterLink, { to: '/',                onClick: props.onClose, class: 'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all' }, () => [h(HomeIcon,        { class: 'w-5 h-5 text-slate-400' }), h('span', 'Site home')]),
                   h(RouterLink, { to: '/dashboard/home', onClick: props.onClose, class: 'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all' }, () => [h(LayoutDashboard, { class: 'w-5 h-5 text-slate-400' }), h('span', 'Dashboard')]),
                   h(RouterLink, { to: '/courses',        onClick: props.onClose, class: 'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all' }, () => [h(BookMarked,      { class: 'w-5 h-5 text-slate-400' }), h('span', 'All courses')]),
+                  h(RouterLink, { to: '/grades',         onClick: props.onClose, class: 'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all' }, () => [h(Award,           { class: 'w-5 h-5 text-slate-400' }), h('span', 'Grades')]),
                   h(RouterLink, { to: '/dashboard/ai',  onClick: props.onClose, class: 'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all cursor-pointer' }, () => [h(Sparkles,       { class: 'w-5 h-5 text-blue-500' }), h('span', 'AI Study Assistant')]),
                 ]),
                 // My enrolled courses

@@ -128,4 +128,87 @@ router.get('/deadlines', protect, async (req, res) => {
   }
 });
 
+// ── GET /api/users/grades ─────────────────────────────────────────────────────
+// Returns grades for all enrolled courses
+router.get('/grades', protect, async (req, res) => {
+  try {
+    const enrollments = await Enrollment.find({ user: req.user._id }).populate('course');
+    const courseIds = enrollments.map(e => e.course._id);
+
+    const [assignments, quizzes, submissions, attempts] = await Promise.all([
+      Assignment.find({ courseId: { $in: courseIds } }),
+      Quiz.find({ courseId: { $in: courseIds } }),
+      Submission.find({ studentId: req.user._id }),
+      QuizAttempt.find({ studentId: req.user._id }),
+    ]);
+
+    const courseMap = {};
+    enrollments.forEach(e => {
+      courseMap[e.course._id.toString()] = {
+        _id: e.course._id,
+        code: e.course.code,
+        title: e.course.title,
+        color: e.course.color,
+        assignments: [],
+        quizzes: [],
+        totalPointsPossible: 0,
+        totalPointsEarned: 0,
+      };
+    });
+
+    const submissionMap = {};
+    submissions.forEach(s => submissionMap[s.assignmentId.toString()] = s);
+
+    const attemptMap = {};
+    attempts.forEach(a => attemptMap[a.quizId.toString()] = a);
+
+    assignments.forEach(a => {
+      const c = courseMap[a.courseId.toString()];
+      if (c) {
+        const sub = submissionMap[a._id.toString()];
+        const grade = sub && sub.grade != null ? sub.grade : null;
+        c.assignments.push({
+          _id: a._id,
+          title: a.title,
+          totalPoints: a.totalPoints || 100,
+          grade,
+        });
+        if (grade != null) {
+          c.totalPointsPossible += a.totalPoints || 100;
+          c.totalPointsEarned += grade;
+        }
+      }
+    });
+
+    quizzes.forEach(q => {
+      const c = courseMap[q.courseId.toString()];
+      if (c) {
+        const att = attemptMap[q._id.toString()];
+        const score = att ? att.score : null;
+        const total = q.questions.reduce((sum, quest) => sum + (quest.points || 1), 0);
+        
+        c.quizzes.push({
+          _id: q._id,
+          title: q.title,
+          totalPoints: total,
+          score,
+        });
+        if (score != null) {
+          c.totalPointsPossible += total;
+          c.totalPointsEarned += score;
+        }
+      }
+    });
+
+    const courses = Object.values(courseMap).map(c => {
+      c.percentage = c.totalPointsPossible > 0 ? Math.round((c.totalPointsEarned / c.totalPointsPossible) * 100) : null;
+      return c;
+    });
+
+    res.json({ courses });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 export default router;

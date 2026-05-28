@@ -267,13 +267,8 @@
           <div class="mt-2">
             <h2 class="text-sm font-bold text-slate-800 uppercase tracking-wider mb-4">Submissions Dashboard</h2>
 
-            <!-- Loading spinner -->
-            <div v-if="submissionsLoading" class="flex items-center justify-center py-12">
-              <Loader2 class="w-8 h-8 text-indigo-600 animate-spin" />
-            </div>
-
             <!-- Empty State -->
-            <div v-else-if="!submissions.length" class="bg-white rounded-2xl border border-slate-200 p-12 text-center shadow-xs">
+            <div v-if="!submissionsLoading && !submissions.length" class="bg-white rounded-2xl border border-slate-200 p-12 text-center shadow-xs">
               <FileText class="w-10 h-10 text-slate-300 mx-auto mb-3" />
               <p class="text-sm font-bold text-slate-700">No submissions yet</p>
               <p class="text-xs text-slate-400 mt-1">Students have not uploaded any files for this assignment.</p>

@@ -208,7 +208,8 @@
               </button>
 
               <!-- Resources list -->
-              <div v-show="expandedSections[sec._id] ?? allExpanded" class="divide-y divide-slate-50">
+              <transition name="expand">
+                <div v-show="expandedSections[sec._id] ?? allExpanded" class="divide-y divide-slate-50 overflow-hidden">
                 <div
                   v-for="res in sec.resources"
                   :key="res._id"
@@ -362,6 +363,7 @@
                 </div>
                 <p v-if="!sec.resources.length" class="px-5 py-4 text-sm text-slate-400 italic">No resources yet.</p>
               </div>
+              </transition>
             </div>
           </div>
         </template>
@@ -694,6 +696,13 @@ onMounted(async () => {
   // Ensure enrollments are loaded
   if (auth.isLoggedIn && !enrollmentStore.enrollments.length) {
     await enrollmentStore.fetchEnrollments();
+  }
+
+  if (enrolled.value) {
+    const e = enrollmentStore.enrollments.find(e => e.course?.code === code);
+    if (e) {
+      enrollmentStore.updateProgress(e._id, undefined);
+    }
   }
 
   // Load sections + resources if user can view
@@ -1064,5 +1073,23 @@ async function executeDelete() {
   0%   { background-color: rgba(59, 130, 246, 0.25); box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.4); }
   30%  { background-color: rgba(59, 130, 246, 0.15); box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25); }
   100% { background-color: transparent; box-shadow: none; }
+}
+</style>
+
+<style>
+.expand-enter-active,
+.expand-leave-active {
+  transition: max-height 0.3s ease-in-out, opacity 0.3s ease-in-out;
+  overflow: hidden;
+}
+.expand-enter-from,
+.expand-leave-to {
+  max-height: 0;
+  opacity: 0;
+}
+.expand-enter-to,
+.expand-leave-from {
+  max-height: 10000px;
+  opacity: 1;
 }
 </style>

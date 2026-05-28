@@ -56,15 +56,26 @@ router.post('/', protect, upload.array('files', 20), async (req, res) => {
       assignmentId, studentId: req.user._id,
     });
 
+    const allFiles = [...keptFiles, ...files];
+
+    if (allFiles.length === 0) {
+      if (existing) {
+        await existing.deleteOne();
+        return res.status(200).json({ message: 'Submission removed successfully', submission: null });
+      } else {
+        return res.status(400).json({ message: 'Please attach at least one file to submit' });
+      }
+    }
+
     let submission;
     if (existing) {
-      existing.files = [...keptFiles, ...files];
+      existing.files = allFiles;
       existing.grade = null;  // Reset grade on re-submission
       existing.feedback = '';
       submission = await existing.save();
     } else {
       submission = await Submission.create({
-        assignmentId, studentId: req.user._id, files,
+        assignmentId, studentId: req.user._id, files: allFiles,
       });
     }
 
