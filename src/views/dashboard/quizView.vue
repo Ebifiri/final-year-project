@@ -70,7 +70,7 @@
             </button>
           </div>
 
-          <div v-else class="flex justify-end">
+          <div v-else-if="!canManage" class="flex justify-end">
             <button @click="startQuiz" class="flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-all shadow-md text-sm cursor-pointer hover:-translate-y-0.5">
               Start Quiz <ChevronRight class="w-4 h-4" />
             </button>
@@ -311,8 +311,8 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
-import { useRoute } from 'vue-router';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { useRoute, onBeforeRouteLeave } from 'vue-router';
 import {
   Timer, Award, BookOpen, ChevronRight, AlertCircle,
   CheckCircle2, XCircle, ArrowLeft, Sparkles, Check
@@ -445,4 +445,20 @@ function getFeedback(index) {
   const ansObj = attempt.value.answers?.find(a => a.questionIndex === index);
   return ansObj?.feedback || '';
 }
+
+onBeforeRouteLeave(async (to, from, next) => {
+  if (state.value === 'active') {
+    // Submit quiz automatically if navigating away
+    try {
+      await submitQuiz(true);
+    } catch(err) {
+      console.error(err);
+    }
+  }
+  next();
+});
+
+onUnmounted(() => {
+  if (timerInterval) clearInterval(timerInterval);
+});
 </script>
