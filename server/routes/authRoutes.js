@@ -21,16 +21,19 @@ async function findOrCreateOAuthUser({ provider, oauthId, name, email }) {
   if (user) return user;
 
   // Then try by email (link existing account)
-  user = await User.findOne({ email });
-  if (user) {
-    user.oauthProvider = provider;
-    user.oauthId       = oauthId;
-    await user.save();
-    return user;
+  if (email) {
+    user = await User.findOne({ email });
+    if (user) {
+      user.oauthProvider = provider;
+      user.oauthId       = oauthId;
+      await user.save();
+      return user;
+    }
   }
 
   // Create brand new user
-  return User.create({ name, email, oauthProvider: provider, oauthId });
+  const finalEmail = email || `${provider}-${oauthId}@pau.edu.ng`;
+  return User.create({ name, email: finalEmail, oauthProvider: provider, oauthId });
 }
 
 // ── Passport: Google ──────────────────────────────────────────────────────────
