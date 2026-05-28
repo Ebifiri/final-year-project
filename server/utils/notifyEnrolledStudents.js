@@ -98,6 +98,7 @@ export async function notifyEnrolledStudents({
             type,
             title,
             body,
+            link: `${process.env.FRONTEND_URL || 'http://localhost:5173'}${link}`,
           }),
         });
 
@@ -179,6 +180,7 @@ export async function notifySpecificStudents({
             type,
             title,
             body,
+            link: `${process.env.FRONTEND_URL || 'http://localhost:5173'}${link}`,
           }),
         });
         if (inserted[idx]) {
@@ -200,7 +202,7 @@ export async function notifySpecificStudents({
 }
 
 // ── Email HTML template ──────────────────────────────────────────────────────
-function buildEmailHtml({ studentName, courseCode, courseName, type, title, body }) {
+function buildEmailHtml({ studentName, courseCode, courseName, type, title, body, link }) {
   const typeLabel = {
     resource:     '📄 New Material',
     assignment:   '📝 New Assignment',
@@ -221,14 +223,22 @@ function buildEmailHtml({ studentName, courseCode, courseName, type, title, body
         <div style="padding: 28px;">
           <p style="color: #475569; font-size: 14px; margin: 0 0 16px;">Hi <strong>${studentName}</strong>,</p>
 
-          <div style="background: #f1f5f9; border-left: 4px solid #6366f1; border-radius: 0 8px 8px 0; padding: 16px; margin-bottom: 20px;">
+          <div style="background: #f1f5f9; border-left: 4px solid #6366f1; border-radius: 0 8px 8px 0; padding: 16px; margin-bottom: 24px;">
             <p style="font-size: 13px; color: #6366f1; font-weight: 600; margin: 0 0 4px;">${courseCode} — ${courseName || ''}</p>
             <p style="font-size: 15px; font-weight: 700; color: #1e293b; margin: 0;">${title}</p>
             ${body ? `<p style="font-size: 13px; color: #64748b; margin: 8px 0 0;">${body}</p>` : ''}
           </div>
 
-          <p style="color: #64748b; font-size: 13px; margin: 0;">
-            Log in to your LMS dashboard to view the details.
+          ${link ? `
+            <div style="text-align: center; margin-bottom: 24px;">
+              <a href="${link}" style="display: inline-block; background: #6366f1; color: white; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-size: 14px; font-weight: 600; box-shadow: 0 2px 4px rgba(99,102,241,0.3);">
+                View Details
+              </a>
+            </div>
+          ` : ''}
+
+          <p style="color: #64748b; font-size: 13px; margin: 0; text-align: center;">
+            Log in to your LMS dashboard to view your course updates.
           </p>
         </div>
 
