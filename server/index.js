@@ -22,8 +22,11 @@ import quizRoutes        from './routes/quizRoutes.js';
 import aiRoutes          from './routes/aiRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
 
+import { startReminderCron } from './utils/reminders.js';
+
 // Connect to MongoDB
 connectDB();
+startReminderCron();
 
 const app = express();
 

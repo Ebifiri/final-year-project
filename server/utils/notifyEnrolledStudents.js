@@ -122,6 +122,83 @@ export async function notifyEnrolledStudents({
   }
 }
 
+export async function notifySpecificStudents({
+  courseId,
+  courseCode,
+  courseName,
+  type,
+  title,
+  body = '',
+  resourceId = null,
+  dueDate = null,
+  userIds = [],
+}) {
+  try {
+    if (!userIds || !userIds.length) return;
+    
+    // Lazy import User model
+    const User = (await import('../models/User.js')).default;
+    const students = await User.find({ _id: { $in: userIds } }).select('name email');
+    
+    if (!students.length) return;
+
+    const link = resourceId
+      ? `/courses/${courseCode}#resource-${resourceId}`
+      : `/courses/${courseCode}`;
+
+    const notifDocs = students.map(student => ({
+      userId:   student._id,
+      courseId,
+      resourceId: resourceId || undefined,
+      type,
+      title,
+      body,
+      link,
+      read:      false,
+      emailSent: false,
+      dueDate:   dueDate || undefined,
+    }));
+
+    const inserted = await Notification.insertMany(notifDocs);
+    console.log(`🔔 Created ${inserted.length} reminder notifications for ${courseCode}`);
+
+    const transporter = getTransporter();
+    if (!transporter) return;
+
+    const emailPromises = students.map(async (student, idx) => {
+      if (!student.email) return;
+      try {
+        await transporter.sendMail({
+          from: `"PAU LMS" <${process.env.EMAIL_USER}>`,
+          to: student.email,
+          subject: `${courseCode}: ${title}`,
+          html: buildEmailHtml({
+            studentName: student.name,
+            courseCode,
+            courseName,
+            type,
+            title,
+            body,
+          }),
+        });
+        if (inserted[idx]) {
+          await Notification.updateOne({ _id: inserted[idx]._id }, { emailSent: true });
+        }
+      } catch (emailErr) {
+        console.warn(`📧 Failed to email ${student.email}:`, emailErr.message);
+      }
+    });
+
+    Promise.allSettled(emailPromises).then(results => {
+      const sent = results.filter(r => r.status === 'fulfilled').length;
+      console.log(`📧 Sent ${sent}/${students.length} reminder emails for ${courseCode}`);
+    });
+
+  } catch (err) {
+    console.error('🔔 Specific Notification error (non-fatal):', err.message);
+  }
+}
+
 // ── Email HTML template ──────────────────────────────────────────────────────
 function buildEmailHtml({ studentName, courseCode, courseName, type, title, body }) {
   const typeLabel = {
