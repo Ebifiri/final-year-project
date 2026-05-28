@@ -369,7 +369,6 @@
                         class="flex items-center gap-2 px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl transition-all shadow-md text-xs cursor-pointer"
                         :disabled="grading"
                       >
-                        <Loader2 v-if="grading" class="w-3.5 h-3.5 animate-spin" />
                         Save Grade & Feedback
                       </button>
                     </div>

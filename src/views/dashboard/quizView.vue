@@ -75,6 +75,41 @@
               Start Quiz <ChevronRight class="w-4 h-4" />
             </button>
           </div>
+
+          <!-- Lecturer Dashboard -->
+          <div v-if="canManage" class="mt-12 border-t border-slate-100 pt-8">
+            <h2 class="text-sm font-bold text-slate-800 uppercase tracking-wider mb-4">Quiz Attempts Dashboard</h2>
+            
+            <div v-if="allAttempts.length === 0" class="bg-slate-50 rounded-2xl border border-dashed border-slate-200 p-8 text-center">
+              <p class="text-sm text-slate-500 font-medium">No students have attempted this quiz yet.</p>
+            </div>
+            
+            <div v-else class="overflow-x-auto rounded-xl border border-slate-200">
+              <table class="w-full text-left text-sm text-slate-600">
+                <thead class="bg-slate-50 text-xs uppercase font-bold text-slate-500 border-b border-slate-200">
+                  <tr>
+                    <th class="px-4 py-3">Student Name</th>
+                    <th class="px-4 py-3">Email</th>
+                    <th class="px-4 py-3">Score</th>
+                    <th class="px-4 py-3">Submitted Date</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 bg-white">
+                  <tr v-for="att in allAttempts" :key="att._id" class="hover:bg-slate-50 transition-colors">
+                    <td class="px-4 py-3 font-semibold text-slate-800">{{ att.studentId?.name }}</td>
+                    <td class="px-4 py-3">{{ att.studentId?.email }}</td>
+                    <td class="px-4 py-3">
+                      <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-indigo-50 text-indigo-700 font-bold rounded-lg border border-indigo-100">
+                        {{ att.score }} / {{ att.totalPoints }}
+                      </span>
+                    </td>
+                    <td class="px-4 py-3 text-xs">{{ new Date(att.createdAt).toLocaleString() }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
         </div>
       </div>
 
@@ -283,8 +318,13 @@ import {
   CheckCircle2, XCircle, ArrowLeft, Sparkles, Check
 } from 'lucide-vue-next';
 import { api } from '@/api/client.js';
+import { useAuthStore } from '@/stores/auth.js';
 
 const route = useRoute();
+const auth = useAuthStore();
+const canManage = computed(() => ['lecturer', 'admin'].includes(auth.user?.role));
+const allAttempts = ref([]);
+
 const quizId = computed(() => route.params.quizId);
 
 const loading = ref(true);
@@ -307,8 +347,13 @@ onMounted(async () => {
     const data = await api.get(`/api/quizzes/${quizId.value}`);
     quiz.value = data.quiz;
     attempt.value = data.attempt || null;
-    if (attempt.value) {
+    if (attempt.value && !canManage.value) {
       state.value = 'results';
+    }
+
+    if (canManage.value) {
+      const attemptsData = await api.get(`/api/quizzes/${quizId.value}/attempts`);
+      allAttempts.value = attemptsData.attempts || [];
     }
   } catch (err) {
     console.error('Failed to load quiz:', err);

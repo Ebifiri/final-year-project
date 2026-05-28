@@ -388,4 +388,18 @@ router.get('/attempts/mine', protect, async (req, res) => {
   }
 });
 
+// ── GET /api/quizzes/:id/attempts  — lecturers get all attempts ───────────────
+router.get('/:id/attempts', protect, async (req, res) => {
+  try {
+    if (!['lecturer', 'admin'].includes(req.user.role)) {
+      return res.status(403).json({ message: 'Not authorised' });
+    }
+    const attempts = await QuizAttempt.find({ quizId: req.params.id })
+      .populate('studentId', 'name email');
+    res.json({ attempts });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 export default router;
