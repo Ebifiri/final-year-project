@@ -26,6 +26,8 @@ onMounted(async () => {
   // Store the JWT and fetch the user profile
   auth.token = token;
   localStorage.setItem('pau_token', token);
+  localStorage.setItem('pau_active_at', Date.now().toString());
+  localStorage.setItem('pau_login_at', Date.now().toString());
 
   try {
     await auth.fetchMe();
