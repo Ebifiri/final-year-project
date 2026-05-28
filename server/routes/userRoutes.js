@@ -4,6 +4,8 @@ import Enrollment from '../models/Enrollment.js';
 import Course from '../models/Course.js';
 import Assignment from '../models/Assignment.js';
 import Quiz from '../models/Quiz.js';
+import Submission from '../models/Submission.js';
+import QuizAttempt from '../models/QuizAttempt.js';
 
 const router = express.Router();
 
@@ -53,11 +55,16 @@ router.get('/deadlines', protect, async (req, res) => {
       };
     });
 
-    // Query assignments and quizzes for these courses
-    const [assignments, quizzes] = await Promise.all([
+    // Query assignments and quizzes for these courses, and user's submissions/attempts
+    const [assignments, quizzes, studentSubmissions, studentAttempts] = await Promise.all([
       Assignment.find({ courseId: { $in: courseIds } }),
       Quiz.find({ courseId: { $in: courseIds } }),
+      Submission.find({ studentId: req.user._id }),
+      QuizAttempt.find({ studentId: req.user._id }),
     ]);
+
+    const submissionSet = new Set(studentSubmissions.map(s => s.assignmentId.toString()));
+    const attemptSet = new Set(studentAttempts.map(a => a.quizId.toString()));
 
     const deadlines = [];
 
@@ -86,6 +93,7 @@ router.get('/deadlines', protect, async (req, res) => {
         courseTitle: c.title || '',
         courseColor: c.color || 'bg-blue-500',
         urgency: getUrgency('assignment', due),
+        hasSubmission: submissionSet.has(a._id.toString()),
       });
     });
 
@@ -103,6 +111,7 @@ router.get('/deadlines', protect, async (req, res) => {
         courseTitle: c.title || '',
         courseColor: c.color || 'bg-indigo-500',
         urgency: getUrgency('quiz', due),
+        hasSubmission: attemptSet.has(q._id.toString()),
       });
     });
 

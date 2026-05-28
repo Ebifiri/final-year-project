@@ -250,11 +250,15 @@
                       <span class="text-[10px] text-slate-400 mt-0.5 block">
                         Assignment &bull; {{ res.assignmentRef.totalPoints || 100 }} marks
                       </span>
-                      <span v-if="res.assignmentRef.opensAt || res.assignmentRef.closesAt" class="text-[10px] text-slate-500 mt-0.5 block">
-                        <span v-if="res.assignmentRef.opensAt">Opens: {{ formatDateTime(res.assignmentRef.opensAt) }}</span>
-                        <span v-if="res.assignmentRef.opensAt && res.assignmentRef.closesAt" class="mx-1.5">&bull;</span>
-                        <span v-if="res.assignmentRef.closesAt">Closes: {{ formatDateTime(res.assignmentRef.closesAt) }}</span>
-                      </span>
+                      <div v-if="res.assignmentRef.opensAt || res.assignmentRef.closesAt" class="mt-2 inline-flex items-center gap-2 bg-slate-100 border border-slate-200 rounded px-2.5 py-1.5">
+                        <span class="text-sm font-extrabold text-slate-800">
+                          <span v-if="res.assignmentRef.opensAt">Opens: {{ formatDateTime(res.assignmentRef.opensAt) }}</span>
+                          <span v-if="res.assignmentRef.opensAt && res.assignmentRef.closesAt" class="mx-1.5 text-slate-400">&bull;</span>
+                          <span v-if="res.assignmentRef.closesAt" :class="{'text-rose-600': new Date(res.assignmentRef.closesAt) < new Date()}">
+                            Closes: {{ formatDateTime(res.assignmentRef.closesAt) }}
+                          </span>
+                        </span>
+                      </div>
                       <p v-if="res.assignmentRef.description" class="text-[10px] text-slate-500 mt-0.5 leading-relaxed line-clamp-2">{{ res.assignmentRef.description }}</p>
                     </div>
                   </RouterLink>
@@ -274,6 +278,15 @@
                       <span class="text-[10px] text-slate-400 mt-0.5 block">
                         Quiz &bull; {{ res.quizRef.durationMinutes || 20 }} mins
                       </span>
+                      <div v-if="res.quizRef.opensAt || res.quizRef.closesAt" class="mt-2 inline-flex items-center gap-2 bg-slate-100 border border-slate-200 rounded px-2.5 py-1.5">
+                        <span class="text-sm font-extrabold text-slate-800">
+                          <span v-if="res.quizRef.opensAt">Opens: {{ formatDateTime(res.quizRef.opensAt) }}</span>
+                          <span v-if="res.quizRef.opensAt && res.quizRef.closesAt" class="mx-1.5 text-slate-400">&bull;</span>
+                          <span v-if="res.quizRef.closesAt" :class="{'text-rose-600': new Date(res.quizRef.closesAt) < new Date()}">
+                            Closes: {{ formatDateTime(res.quizRef.closesAt) }}
+                          </span>
+                        </span>
+                      </div>
                     </div>
                   </RouterLink>
 

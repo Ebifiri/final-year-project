@@ -262,14 +262,16 @@
           <h2 class="text-sm font-bold text-slate-500 uppercase tracking-wider mb-4 flex items-center gap-2">
             <ListTodo class="w-4 h-4" /> Upcoming Deadlines
           </h2>
-          <div v-if="tasks.length === 0" class="flex flex-col items-center py-8 text-center">
+          
+          <!-- Upcoming Deadlines Sub-list -->
+          <div v-if="upcomingTasks.length === 0" class="flex flex-col items-center py-8 text-center">
             <ListTodo class="w-8 h-8 text-slate-200 mb-2" />
             <p class="text-sm text-slate-400 font-medium">No upcoming deadlines</p>
           </div>
           <div v-else class="relative flex flex-col gap-0">
             <div class="absolute left-[15px] top-4 bottom-4 w-px bg-slate-100"></div>
             <RouterLink
-              v-for="t in tasks" :key="t.id"
+              v-for="t in upcomingTasks" :key="t.id"
               :to="t.type === 'assignment' ? `/assignments/${t.id}/submit` : `/quizzes/${t.id}`"
               class="relative flex gap-4 pb-5 last:pb-0 hover:bg-slate-50/50 rounded-lg -mx-2 px-2 py-1 transition-colors cursor-pointer"
             >
@@ -288,6 +290,47 @@
               </div>
             </RouterLink>
           </div>
+
+          <!-- Missed Deadlines Sub-list -->
+          <div v-if="missedTasks.length > 0" class="border-t border-slate-100 pt-4 mt-4">
+            <h3 class="text-xs font-bold text-rose-600 uppercase tracking-wider mb-3 flex items-center gap-2">
+              <AlertTriangle class="w-3.5 h-3.5" /> Missed Deadlines
+            </h3>
+            <div class="relative flex flex-col gap-0">
+              <div class="absolute left-[15px] top-4 bottom-4 w-px bg-slate-100"></div>
+              <div
+                v-for="t in missedTasks" :key="t.id"
+                class="relative flex items-center justify-between hover:bg-rose-50/30 rounded-lg -mx-2 px-2 py-1.5 transition-colors group/item"
+              >
+                <RouterLink
+                  :to="t.type === 'assignment' ? `/assignments/${t.id}/submit` : `/quizzes/${t.id}`"
+                  class="flex-1 flex gap-4 min-w-0 cursor-pointer"
+                >
+                  <div class="w-[10px] h-[10px] rounded-full mt-1.5 flex-shrink-0 ml-[10px] border-2 border-white ring-2 ring-rose-400 bg-rose-500"></div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-semibold text-slate-800 leading-snug line-clamp-1 group-hover/item:text-rose-700 transition-colors">{{ t.title }}</p>
+                    <p class="text-xs text-slate-400 mt-0.5">{{ t.course }}</p>
+                    <div class="flex items-center gap-2 mt-1.5">
+                      <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 border border-rose-100">
+                        Overdue
+                      </span>
+                      <span class="text-[11px] text-slate-400 flex items-center gap-1">
+                        <CalendarDays class="w-3 h-3" /> Missed {{ formatDate(t.rawDate) }}
+                      </span>
+                    </div>
+                  </div>
+                </RouterLink>
+                <button
+                  type="button"
+                  class="p-1 rounded-md text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors ml-2 cursor-pointer opacity-0 group-hover/item:opacity-100 focus:opacity-100"
+                  title="Dismiss missed deadline"
+                  @click.stop="dismissDeadline(t.id)"
+                >
+                  <X class="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </div>
         </section>
       </div>
     </div>
@@ -301,6 +344,7 @@ import {
   Clock, BookOpen, ChevronLeft, ChevronRight,
   ListTodo, MonitorPlay, CalendarDays,
   Users, GraduationCap, Presentation, PenLine,
+  X, AlertTriangle,
 } from 'lucide-vue-next';
 import { useEnrollmentStore } from '@/stores/enrollments.js';
 import { useAuthStore }       from '@/stores/auth.js';
@@ -310,8 +354,20 @@ const auth            = useAuthStore();
 const enrollmentStore = useEnrollmentStore();
 
 const isLecturer = computed(() => ['lecturer', 'admin'].includes(auth.user?.role));
+const dismissedDeadlineIds = ref([]);
 
 onMounted(async () => {
+  if (auth.user?._id) {
+    const saved = localStorage.getItem(`dismissed-deadlines-${auth.user._id}`);
+    if (saved) {
+      try {
+        dismissedDeadlineIds.value = JSON.parse(saved);
+      } catch (e) {
+        console.error('Failed to parse dismissed deadlines:', e);
+      }
+    }
+  }
+
   if (isLecturer.value) {
     await fetchLecturerCourses();
   } else {
@@ -321,6 +377,15 @@ onMounted(async () => {
     ]);
   }
 });
+
+function dismissDeadline(id) {
+  if (!dismissedDeadlineIds.value.includes(id)) {
+    dismissedDeadlineIds.value.push(id);
+    if (auth.user?._id) {
+      localStorage.setItem(`dismissed-deadlines-${auth.user._id}`, JSON.stringify(dismissedDeadlineIds.value));
+    }
+  }
+}
 
 // ── Lecturer courses ───────────────────────────────────────────────────────────
 const lecturerCourses  = ref([]);
@@ -421,6 +486,23 @@ function nextMonth() {
 // ── Tasks (empty by default) ──────────────────────────────────────────────────
 const tasks = ref([]);
 
+const upcomingTasks = computed(() => {
+  return tasks.value.filter(t => {
+    if (!t.rawDate) return true;
+    return new Date(t.rawDate) >= new Date();
+  });
+});
+
+const missedTasks = computed(() => {
+  return tasks.value.filter(t => {
+    if (!t.rawDate) return false;
+    const isPast = new Date(t.rawDate) < new Date();
+    const isMissed = isPast && !t.hasSubmission;
+    const isDismissed = dismissedDeadlineIds.value.includes(t.id);
+    return isMissed && !isDismissed;
+  });
+});
+
 async function fetchDeadlines() {
   try {
     const data = await api.get('/api/users/deadlines');
@@ -431,6 +513,7 @@ async function fetchDeadlines() {
       urgency: d.urgency, // 'high', 'medium', 'low'
       rawDate: d.dueDate || d.closesAt,
       type: d.type, // 'assignment' or 'quiz'
+      hasSubmission: d.hasSubmission,
     }));
   } catch (err) {
     console.error('Failed to fetch deadlines:', err);
