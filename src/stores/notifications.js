@@ -67,8 +67,6 @@ export const useNotificationStore = defineStore('notifications', () => {
     } catch { /* ignore */ }
   }
 
-  }
-
   // ── Clear all ──────────────────────────────────────────────────────────────
   async function clearAll(type = null) {
     try {
