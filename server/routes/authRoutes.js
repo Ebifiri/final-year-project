@@ -62,23 +62,33 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
 if (process.env.MICROSOFT_CLIENT_ID && process.env.MICROSOFT_CLIENT_SECRET) {
   passport.use(new MicrosoftStrategy(
     {
-      clientID:     process.env.MICROSOFT_CLIENT_ID,
-      clientSecret: process.env.MICROSOFT_CLIENT_SECRET,
-      callbackURL:  `${process.env.BACKEND_URL}/api/auth/microsoft/callback`,
-      scope:        ['openid', 'profile', 'email'],
+      clientID:         process.env.MICROSOFT_CLIENT_ID,
+      clientSecret:     process.env.MICROSOFT_CLIENT_SECRET,
+      callbackURL:      `${process.env.BACKEND_URL}/api/auth/microsoft/callback`,
+      scope:            ['openid', 'profile', 'email'],
+      tenant:           'common',
+      authorizationURL: 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize',
+      tokenURL:         'https://login.microsoftonline.com/common/oauth2/v2.0/token',
     },
     async (_at, _rt, profile, done) => {
       try {
+        console.log('[Microsoft OAuth] Profile received:', JSON.stringify({ id: profile.id, displayName: profile.displayName, emails: profile.emails }, null, 2));
         const user = await findOrCreateOAuthUser({
           provider: 'microsoft',
           oauthId:  profile.id,
           name:     profile.displayName,
-          email:    profile.emails?.[0]?.value ?? profile._json?.mail ?? '',
+          email:    profile.emails?.[0]?.value ?? profile._json?.mail ?? profile._json?.userPrincipalName ?? '',
         });
         done(null, user);
-      } catch (err) { done(err); }
+      } catch (err) {
+        console.error('[Microsoft OAuth] Error in verify callback:', err);
+        done(err);
+      }
     }
   ));
+  console.log('✅ Microsoft OAuth strategy configured');
+} else {
+  console.warn('⚠️ Microsoft OAuth NOT configured — MICROSOFT_CLIENT_ID or MICROSOFT_CLIENT_SECRET missing');
 }
 
 // ── POST /api/auth/register ───────────────────────────────────────────────────
@@ -174,13 +184,18 @@ router.get('/microsoft/callback', (req, res, next) => {
   if (!microsoftConfigured) {
     return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/login?error=oauth_not_configured`);
   }
-  passport.authenticate('microsoft', {
-    session: false,
-    failureRedirect: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/login?error=oauth`,
+  passport.authenticate('microsoft', { session: false }, (err, user, info) => {
+    if (err) {
+      console.error('[Microsoft OAuth] Callback authentication error:', err);
+      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/login?error=oauth`);
+    }
+    if (!user) {
+      console.error('[Microsoft OAuth] No user returned. Info:', info);
+      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/login?error=oauth`);
+    }
+    const token = signToken(user._id);
+    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/auth/callback?token=${token}`);
   })(req, res, next);
-}, (req, res) => {
-  const token = signToken(req.user._id);
-  res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/auth/callback?token=${token}`);
 });
 
 export default router;

@@ -21,6 +21,7 @@ import nodemailer   from 'nodemailer';
 
 // ── Email transporter (created lazily, cached) ──────────────────────────────
 let _transporter = null;
+let _transporterVerified = false;
 
 function getTransporter() {
   if (_transporter) return _transporter;
@@ -28,7 +29,7 @@ function getTransporter() {
   const user = process.env.EMAIL_USER;
   const pass = process.env.EMAIL_PASS;
   if (!user || !pass) {
-    console.log('📧 EMAIL_USER / EMAIL_PASS not set — email notifications disabled');
+    console.warn(`📧 EMAIL_USER / EMAIL_PASS not set — email notifications disabled (EMAIL_USER=${user ? 'SET' : 'MISSING'}, EMAIL_PASS=${pass ? 'SET' : 'MISSING'})`);
     return null;
   }
 
@@ -37,7 +38,20 @@ function getTransporter() {
     auth: { user, pass },
   });
 
-  console.log(`📧 Email transport ready (${user})`);
+  // Verify connection asynchronously (don't block)
+  if (!_transporterVerified) {
+    _transporter.verify()
+      .then(() => {
+        _transporterVerified = true;
+        console.log(`✅ Email transport verified and ready (${user})`);
+      })
+      .catch(err => {
+        console.error(`❌ Email transport verification FAILED for ${user}:`, err.message);
+        _transporter = null; // Reset so it retries next time
+      });
+  }
+
+  console.log(`📧 Email transport created (${user})`);
   return _transporter;
 }
 
@@ -55,6 +69,7 @@ export async function notifyEnrolledStudents({
   try {
     // 1. Find all students enrolled in this course
     const enrollments = await Enrollment.find({ course: courseId }).populate('user', 'name email');
+    console.log(`🔔 notifyEnrolledStudents called for ${courseCode}: found ${enrollments.length} enrollments`);
     if (!enrollments.length) return;
 
     const link = resourceId

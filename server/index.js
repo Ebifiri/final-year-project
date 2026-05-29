@@ -55,7 +55,18 @@ app.use('/api/ai',            aiRoutes);
 app.use('/api/notifications', notificationRoutes);
 
 // ── Health check ─────────────────────────────────────────────────────────────
-app.get('/api/health', (_, res) => res.json({ status: 'ok', timestamp: new Date() }));
+app.get('/api/health', (_, res) => res.json({
+  status: 'ok',
+  timestamp: new Date(),
+  config: {
+    EMAIL_USER: process.env.EMAIL_USER ? 'SET' : 'MISSING',
+    EMAIL_PASS: process.env.EMAIL_PASS ? 'SET' : 'MISSING',
+    FRONTEND_URL: process.env.FRONTEND_URL || 'NOT SET',
+    BACKEND_URL: process.env.BACKEND_URL || 'NOT SET',
+    GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID ? 'SET' : 'MISSING',
+    MICROSOFT_CLIENT_ID: process.env.MICROSOFT_CLIENT_ID ? 'SET' : 'MISSING',
+  }
+}));
 
 // ── 404 fallback ──────────────────────────────────────────────────────────────
 app.use((_, res) => res.status(404).json({ message: 'Route not found' }));
