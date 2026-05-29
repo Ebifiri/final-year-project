@@ -10,6 +10,12 @@ const assignmentSchema = new mongoose.Schema(
     closesAt:    Date,
     totalPoints: { type: Number, default: 100 },
     createdBy:   { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    remindersSent: {
+      threeDays: { type: Boolean, default: false },
+      twentyFourHours: { type: Boolean, default: false },
+      sixHours: { type: Boolean, default: false },
+      oneHour: { type: Boolean, default: false },
+    },
   },
   { timestamps: true }
 );
