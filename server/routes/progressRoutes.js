@@ -18,7 +18,7 @@ router.get('/:courseId', protect, async (req, res) => {
       return res.status(403).json({ message: 'Not authorised' });
     }
 
-    const course = await Course.findById(req.params.courseId);
+    const course = await Course.findById(req.params.courseId).lean();
     if (!course) return res.status(404).json({ message: 'Course not found' });
 
     // Verify lecturer owns this course
@@ -27,15 +27,15 @@ router.get('/:courseId', protect, async (req, res) => {
     }
 
     // Fetch all enrolled students
-    const enrollments = await Enrollment.find({ course: course._id }).populate('user', 'name email');
+    const enrollments = await Enrollment.find({ course: course._id }).populate('user', 'name email').lean();
     const students = enrollments.map(e => e.user).filter(Boolean);
 
     // Fetch all quizzes, assignments, attempts, and submissions for this course
     const [quizzes, assignments, allAttempts, allSubmissions] = await Promise.all([
-      Quiz.find({ courseId: course._id }),
-      Assignment.find({ courseId: course._id }),
-      QuizAttempt.find({ quizId: { $in: (await Quiz.find({ courseId: course._id }).select('_id')).map(q => q._id) } }),
-      Submission.find({ assignmentId: { $in: (await Assignment.find({ courseId: course._id }).select('_id')).map(a => a._id) } }),
+      Quiz.find({ courseId: course._id }).lean(),
+      Assignment.find({ courseId: course._id }).lean(),
+      QuizAttempt.find({ quizId: { $in: (await Quiz.find({ courseId: course._id }).select('_id').lean()).map(q => q._id) } }).lean(),
+      Submission.find({ assignmentId: { $in: (await Assignment.find({ courseId: course._id }).select('_id').lean()).map(a => a._id) } }).lean(),
     ]);
 
     // Build per-student performance data
@@ -206,7 +206,7 @@ router.post('/:courseId/guidance', protect, async (req, res) => {
       return res.status(400).json({ message: 'studentId and message are required' });
     }
 
-    const course = await Course.findById(req.params.courseId);
+    const course = await Course.findById(req.params.courseId).lean();
     if (!course) return res.status(404).json({ message: 'Course not found' });
 
     await notifySpecificStudents({

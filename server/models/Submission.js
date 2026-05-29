@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 const submissionSchema = new mongoose.Schema(
   {
     assignmentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Assignment', required: true },
-    studentId:    { type: mongoose.Schema.Types.ObjectId, ref: 'User',       required: true },
+    studentId:    { type: mongoose.Schema.Types.ObjectId, ref: 'User',       required: true, index: true },
     files: [
       {
         name:     String,

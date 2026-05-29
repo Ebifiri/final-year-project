@@ -11,6 +11,7 @@ router.get('/', protect, async (req, res) => {
   try {
     const enrollments = await Enrollment.find({ user: req.user._id })
       .populate('course')
+      .lean()
       .sort({ lastAccessed: -1 });
 
     res.json({ enrollments });
@@ -30,7 +31,7 @@ router.post('/', protect, async (req, res) => {
     }
 
     // Look up the course
-    const course = await Course.findOne({ code: courseCode.toUpperCase() });
+    const course = await Course.findOne({ code: courseCode.toUpperCase() }).lean();
     if (!course) {
       return res.status(404).json({ message: 'Course not found' });
     }

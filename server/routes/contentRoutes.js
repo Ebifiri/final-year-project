@@ -23,7 +23,7 @@ const router = express.Router();
 async function canManageCourse(userId, userRole, courseCode) {
   if (userRole === 'admin') return true;
   if (userRole !== 'lecturer') return false;
-  const course = await Course.findOne({ code: courseCode.toUpperCase() });
+  const course = await Course.findOne({ code: courseCode.toUpperCase() }).lean();
   return course?.lecturers?.some(id => id.equals(userId)) ?? false;
 }
 
@@ -135,10 +135,10 @@ router.get('/debug/:resourceId', async (req, res) => {
 // ── GET /api/content/:courseCode  — public ────────────────────────────────────
 router.get('/:courseCode', async (req, res) => {
   try {
-    const course = await Course.findOne({ code: req.params.courseCode.toUpperCase() });
+    const course = await Course.findOne({ code: req.params.courseCode.toUpperCase() }).lean();
     if (!course) return res.status(404).json({ message: 'Course not found' });
 
-    const sections = await Section.find({ courseId: course._id }).sort({ order: 1 });
+    const sections = await Section.find({ courseId: course._id }).sort({ order: 1 }).lean();
 
     const sectionsWithResources = await Promise.all(
       sections.map(async (sec) => {
@@ -146,8 +146,9 @@ router.get('/:courseCode', async (req, res) => {
           .sort({ order: 1 })
           .populate('uploadedBy', 'name')
           .populate('assignmentRef', 'title dueDate totalPoints opensAt closesAt description')
-          .populate('quizRef', 'title dueDate durationMinutes opensAt closesAt');
-        return { ...sec.toObject(), resources };
+          .populate('quizRef', 'title dueDate durationMinutes opensAt closesAt')
+          .lean();
+        return { ...sec, resources };
       })
     );
 

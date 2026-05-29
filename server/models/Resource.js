@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 const resourceSchema = new mongoose.Schema(
   {
     sectionId:    { type: mongoose.Schema.Types.ObjectId, ref: 'Section', required: true, index: true },
-    courseId:     { type: mongoose.Schema.Types.ObjectId, ref: 'Course',  required: true },
+    courseId:     { type: mongoose.Schema.Types.ObjectId, ref: 'Course',  required: true, index: true },
     title:        { type: String, required: true, trim: true },
     type: {
       type: String,

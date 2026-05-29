@@ -11,7 +11,7 @@ router.get('/my', protect, async (req, res) => {
     if (!['lecturer', 'admin'].includes(req.user.role)) {
       return res.status(403).json({ message: 'Not authorised' });
     }
-    const courses = await Course.find({ lecturers: req.user._id }).sort({ code: 1 });
+    const courses = await Course.find({ lecturers: req.user._id }).sort({ code: 1 }).lean();
     res.json({ courses });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -39,7 +39,7 @@ router.get('/', async (req, res) => {
       ];
     }
 
-    const courses = await Course.find(filter).sort({ code: 1 });
+    const courses = await Course.find(filter).sort({ code: 1 }).lean();
     res.json({ courses });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -50,7 +50,7 @@ router.get('/', async (req, res) => {
 // Public — no auth required to view a single course
 router.get('/:code', async (req, res) => {
   try {
-    const course = await Course.findOne({ code: req.params.code.toUpperCase() });
+    const course = await Course.findOne({ code: req.params.code.toUpperCase() }).lean();
     if (!course) {
       return res.status(404).json({ message: 'Course not found' });
     }

@@ -38,10 +38,10 @@ router.get('/deadlines', protect, async (req, res) => {
     let courseIds = [];
     let courses = [];
     if (['lecturer', 'admin'].includes(req.user.role)) {
-      courses = await Course.find({ lecturers: req.user._id });
+      courses = await Course.find({ lecturers: req.user._id }).lean();
       courseIds = courses.map(c => c._id);
     } else {
-      const enrollments = await Enrollment.find({ user: req.user._id }).populate('course');
+      const enrollments = await Enrollment.find({ user: req.user._id }).populate('course').lean();
       courses = enrollments.map(e => e.course).filter(Boolean);
       courseIds = courses.map(c => c._id);
     }
@@ -57,10 +57,10 @@ router.get('/deadlines', protect, async (req, res) => {
 
     // Query assignments and quizzes for these courses, and user's submissions/attempts
     const [assignments, quizzes, studentSubmissions, studentAttempts] = await Promise.all([
-      Assignment.find({ courseId: { $in: courseIds } }),
-      Quiz.find({ courseId: { $in: courseIds } }),
-      Submission.find({ studentId: req.user._id }),
-      QuizAttempt.find({ studentId: req.user._id }),
+      Assignment.find({ courseId: { $in: courseIds } }).lean(),
+      Quiz.find({ courseId: { $in: courseIds } }).lean(),
+      Submission.find({ studentId: req.user._id }).lean(),
+      QuizAttempt.find({ studentId: req.user._id }).lean(),
     ]);
 
     const submissionSet = new Set(studentSubmissions.map(s => s.assignmentId.toString()));
@@ -132,14 +132,14 @@ router.get('/deadlines', protect, async (req, res) => {
 // Returns grades for all enrolled courses
 router.get('/grades', protect, async (req, res) => {
   try {
-    const enrollments = await Enrollment.find({ user: req.user._id }).populate('course');
+    const enrollments = await Enrollment.find({ user: req.user._id }).populate('course').lean();
     const courseIds = enrollments.map(e => e.course._id);
 
     const [assignments, quizzes, submissions, attempts] = await Promise.all([
-      Assignment.find({ courseId: { $in: courseIds } }),
-      Quiz.find({ courseId: { $in: courseIds } }),
-      Submission.find({ studentId: req.user._id }),
-      QuizAttempt.find({ studentId: req.user._id }),
+      Assignment.find({ courseId: { $in: courseIds } }).lean(),
+      Quiz.find({ courseId: { $in: courseIds } }).lean(),
+      Submission.find({ studentId: req.user._id }).lean(),
+      QuizAttempt.find({ studentId: req.user._id }).lean(),
     ]);
 
     const courseMap = {};
