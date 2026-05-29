@@ -388,18 +388,6 @@
                 placeholder="e.g. Week 1 – Introduction"
               />
             </div>
-            <div>
-              <label class="text-xs font-semibold text-slate-600 mb-1 block">Type</label>
-              <select
-                v-model="newSection.type"
-                class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-              >
-                <option value="general">General</option>
-                <option value="week">Week</option>
-                <option value="module">Module</option>
-                <option value="announcement">Announcement</option>
-              </select>
-            </div>
           </div>
           <div class="flex justify-end gap-2 mt-5">
             <button class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-xl transition-colors" @click="showAddSection = false">Cancel</button>
