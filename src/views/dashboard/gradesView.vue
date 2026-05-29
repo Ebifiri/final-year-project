@@ -148,20 +148,39 @@
       <!-- Course tabs + content -->
       <template v-else>
         <!-- Course Tabs -->
-        <div class="flex gap-2 overflow-x-auto pb-2 mb-6 scrollbar-hide">
+        <div class="flex items-center gap-2 mb-6">
           <button
-            v-for="c in lecturerCourses"
-            :key="c._id"
-            :class="[
-              'flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold border transition-all whitespace-nowrap',
-              activeCourseId === c._id
-                ? 'bg-slate-900 text-white border-slate-900 shadow-md'
-                : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400 hover:bg-slate-50'
-            ]"
-            @click="selectCourse(c._id)"
+            @click="prevPage"
+            :disabled="currentPage === 0"
+            class="p-2 shrink-0 rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-900 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
           >
-            <BookOpen class="w-4 h-4" />
-            {{ c.code }}
+            <ChevronLeft class="w-5 h-5" />
+          </button>
+
+          <div class="flex-1 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+            <button
+              v-for="c in paginatedCourses"
+              :key="c._id"
+              :class="[
+                'flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-bold border transition-all truncate',
+                activeCourseId === c._id
+                  ? 'bg-slate-900 text-white border-slate-900 shadow-md'
+                  : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400 hover:bg-slate-50'
+              ]"
+              @click="selectCourse(c._id)"
+              :title="c.title"
+            >
+              <BookOpen class="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+              <span class="truncate">{{ c.code }}</span>
+            </button>
+          </div>
+
+          <button
+            @click="nextPage"
+            :disabled="currentPage >= totalPages - 1"
+            class="p-2 shrink-0 rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-900 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+          >
+            <ChevronRight class="w-5 h-5" />
           </button>
         </div>
 
@@ -389,7 +408,7 @@ import { api } from '@/api/client.js';
 import { useAuthStore } from '@/stores/auth.js';
 import {
   Award, FileText, CheckSquare, BookOpen, Users, Sparkles, Send,
-  CheckCircle, XCircle,
+  CheckCircle, XCircle, ChevronLeft, ChevronRight,
 } from 'lucide-vue-next';
 
 const auth = useAuthStore();
@@ -404,6 +423,25 @@ const activeCourseId = ref(null);
 const progressLoading = ref(false);
 const progressData = ref(null);
 const selectedStudent = ref(null);
+
+// Pagination state
+const currentPage = ref(0);
+const itemsPerPage = 10;
+
+const totalPages = computed(() => Math.ceil(lecturerCourses.value.length / itemsPerPage));
+
+const paginatedCourses = computed(() => {
+  const start = currentPage.value * itemsPerPage;
+  return lecturerCourses.value.slice(start, start + itemsPerPage);
+});
+
+function prevPage() {
+  if (currentPage.value > 0) currentPage.value--;
+}
+
+function nextPage() {
+  if (currentPage.value < totalPages.value - 1) currentPage.value++;
+}
 
 // AI insights
 const insightsLoading = ref(false);
