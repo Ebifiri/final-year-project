@@ -71,7 +71,7 @@
               <div v-if="isLoggedIn" class="relative" ref="bellRef">
                 <button
                   class="relative p-2 text-slate-300 hover:bg-slate-800 rounded-full transition-colors"
-                  @click="toggleNotifPanel"
+                  @click.stop="toggleNotifPanel"
                 >
                   <Bell class="w-5 h-5" />
                   <span
@@ -163,7 +163,7 @@
               <div v-if="isLoggedIn" class="relative" ref="mailRef">
                 <button
                   class="relative p-2 text-slate-300 hover:bg-slate-800 rounded-full transition-colors"
-                  @click="toggleMailPanel"
+                  @click.stop="toggleMailPanel"
                 >
                   <Mail class="w-5 h-5" />
                   <span

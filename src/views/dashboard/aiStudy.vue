@@ -28,7 +28,7 @@
     </div>
 
     <!-- Main content -->
-    <div class="max-w-4xl mx-auto px-3 sm:px-4 py-6 sm:py-8 space-y-6 sm:space-y-8">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6 sm:space-y-8">
 
       <!-- Not logged in -->
       <div v-if="!auth.isLoggedIn" class="text-center py-16">
