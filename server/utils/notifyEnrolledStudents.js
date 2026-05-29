@@ -62,7 +62,10 @@ export async function notifyEnrolledStudents({
       : `/courses/${courseCode}`;
 
     // 2. Bulk-create in-app notifications
-    const notifDocs = enrollments.map(e => ({
+    const validEnrollments = enrollments.filter(e => e.user && e.user._id);
+    if (!validEnrollments.length) return;
+
+    const notifDocs = validEnrollments.map(e => ({
       userId:   e.user._id,
       courseId,
       resourceId: resourceId || undefined,
@@ -82,7 +85,7 @@ export async function notifyEnrolledStudents({
     const transporter = getTransporter();
     if (!transporter) return;
 
-    const emailPromises = enrollments.map(async (enrollment, idx) => {
+    const emailPromises = validEnrollments.map(async (enrollment, idx) => {
       const student = enrollment.user;
       if (!student?.email) return;
 
