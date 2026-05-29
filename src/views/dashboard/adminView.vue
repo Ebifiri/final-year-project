@@ -387,7 +387,7 @@
               </div>
               <div class="flex items-center gap-2 text-sm text-slate-600">
                 <Building class="w-4 h-4 text-slate-400" />
-                <span>{{ course.dept }} (Year {{ course.year }})</span>
+                <span>{{ course.dept }} ({{ course.year }})</span>
               </div>
             </div>
           </div>
@@ -480,22 +480,32 @@
               </div>
             </div>
             
-            <div class="grid grid-cols-3 gap-4">
-              <div>
+            <div class="grid grid-cols-12 gap-4">
+              <div class="col-span-12 md:col-span-6">
                 <label class="block text-sm font-medium text-slate-700 mb-1">Department</label>
-                <input v-model="courseForm.dept" required type="text" class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-slate-700 mb-1">Year</label>
-                <select v-model="courseForm.year" required class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white">
-                  <option value="1">Year 1</option>
-                  <option value="2">Year 2</option>
-                  <option value="3">Year 3</option>
-                  <option value="4">Year 4</option>
-                  <option value="5">Year 5</option>
+                <select v-model="courseForm.dept" required class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white">
+                  <option value="" disabled>Select Department</option>
+                  <option value="Professional Education">Professional Education</option>
+                  <option value="Film and Multimedia Studies">Film and Multimedia Studies</option>
+                  <option value="Strategic Communication">Strategic Communication</option>
+                  <option value="School of Science & Tech (SST)">School of Science & Tech (SST)</option>
+                  <option value="School of Media & Comm (MassComm)">School of Media & Comm (MassComm)</option>
+                  <option value="School of Mgt & Social Sci (SMSS)">School of Mgt & Social Sci (SMSS)</option>
+                  <option value="ISMS">ISMS</option>
+                  <option value="Institute of Humanities (IoH)">Institute of Humanities (IoH)</option>
                 </select>
               </div>
-              <div>
+              <div class="col-span-6 md:col-span-3">
+                <label class="block text-sm font-medium text-slate-700 mb-1">Year</label>
+                <select v-model="courseForm.year" required class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white">
+                  <option value="Year 1">Year 1</option>
+                  <option value="Year 2">Year 2</option>
+                  <option value="Year 3">Year 3</option>
+                  <option value="Year 4">Year 4</option>
+                  <option value="Year 5">Year 5</option>
+                </select>
+              </div>
+              <div class="col-span-6 md:col-span-3">
                 <label class="block text-sm font-medium text-slate-700 mb-1">Credits</label>
                 <input v-model="courseForm.credits" required type="number" min="1" max="6" class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
               </div>
@@ -517,19 +527,22 @@
             <!-- Lecturers Assignment -->
             <div class="border-t border-slate-200 pt-4 mt-6">
               <label class="block text-sm font-medium text-slate-700 mb-2">Assign Lecturers</label>
-              <div class="bg-slate-50 border border-slate-200 rounded-lg p-3 max-h-48 overflow-y-auto">
+              <div class="bg-slate-50 border border-slate-200 rounded-lg p-4 max-h-48 overflow-y-auto">
                 <div v-if="allLecturers.length === 0" class="text-sm text-slate-500 italic">No lecturers found in the system.</div>
-                <div v-for="lecturer in allLecturers" :key="lecturer._id" class="flex items-center mb-2 last:mb-0">
-                  <input 
-                    type="checkbox" 
-                    :id="'lec-'+lecturer._id"
-                    :value="lecturer._id"
-                    v-model="courseForm.lecturers"
-                    class="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"
-                  >
-                  <label :for="'lec-'+lecturer._id" class="ml-3 text-sm text-slate-700 cursor-pointer select-none">
-                    <span class="font-medium">{{ lecturer.name }}</span> <span class="text-slate-500 text-xs ml-1">({{ lecturer.email }})</span>
-                  </label>
+                <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div v-for="lecturer in allLecturers" :key="lecturer._id" class="flex items-center bg-white border border-slate-200 rounded-lg p-2.5 shadow-sm hover:border-indigo-300 transition-colors">
+                    <input 
+                      type="checkbox" 
+                      :id="'lec-'+lecturer._id"
+                      :value="lecturer._id"
+                      v-model="courseForm.lecturers"
+                      class="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500 flex-shrink-0"
+                    >
+                    <label :for="'lec-'+lecturer._id" class="ml-3 text-xs text-slate-700 cursor-pointer select-none min-w-0 flex-1">
+                      <p class="font-semibold text-slate-800 truncate" :title="lecturer.name">{{ lecturer.name }}</p>
+                      <p class="text-slate-400 truncate text-[10px]" :title="lecturer.email">{{ lecturer.email }}</p>
+                    </label>
+                  </div>
                 </div>
               </div>
             </div>
@@ -578,7 +591,7 @@ const showUserModal = ref(false);
 const showCourseModal = ref(false);
 
 const userForm = ref({ name: '', email: '', password: '', role: 'student', activeCourses: [] });
-const courseForm = ref({ code: '', title: '', dept: '', year: '1', credits: 3, description: '', color: '#4f46e5', lecturers: [] });
+const courseForm = ref({ code: '', title: '', dept: '', year: 'Year 1', credits: 3, description: '', color: '#4f46e5', lecturers: [] });
 
 // Computed
 const filteredUsers = computed(() => {
@@ -722,7 +735,7 @@ const openCourseModal = (course = null) => {
       lecturers: course.lecturers ? course.lecturers.map(l => l._id) : []
     };
   } else {
-    courseForm.value = { code: '', title: '', dept: '', year: '1', credits: 3, description: '', color: '#4f46e5', lecturers: [] };
+    courseForm.value = { code: '', title: '', dept: '', year: 'Year 1', credits: 3, description: '', color: '#4f46e5', lecturers: [] };
   }
   showCourseModal.value = true;
 };
