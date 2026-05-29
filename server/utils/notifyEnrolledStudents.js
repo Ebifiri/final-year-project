@@ -34,8 +34,13 @@ function getTransporter() {
   }
 
   _transporter = nodemailer.createTransport({
-    service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true,
     auth: { user, pass },
+    // Force IPv4 — Render doesn't support outbound IPv6 connections,
+    // which causes ENETUNREACH when Gmail resolves to an IPv6 address
+    family: 4,
   });
 
   // Verify connection asynchronously (don't block)
