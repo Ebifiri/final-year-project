@@ -17,57 +17,23 @@
 
 import Notification from '../models/Notification.js';
 import Enrollment   from '../models/Enrollment.js';
-import nodemailer   from 'nodemailer';
-import dns          from 'dns';
+import { Resend }   from 'resend';
 
-// ── Email transporter (created lazily, cached) ──────────────────────────────
-let _transporter = null;
-let _transporterVerified = false;
+// ── Email client (created lazily, cached) ──────────────────────────────
+let _resendClient = null;
 
-async function getTransporter() {
-  if (_transporter) return _transporter;
+function getResendClient() {
+  if (_resendClient) return _resendClient;
 
-  const user = process.env.EMAIL_USER;
-  const pass = process.env.EMAIL_PASS;
-  if (!user || !pass) {
-    console.warn(`📧 EMAIL_USER / EMAIL_PASS not set — email notifications disabled (EMAIL_USER=${user ? 'SET' : 'MISSING'}, EMAIL_PASS=${pass ? 'SET' : 'MISSING'})`);
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    console.warn('📧 RESEND_API_KEY not set — email notifications disabled');
     return null;
   }
 
-  try {
-    // Explicitly resolve to IPv4 because Render does not support outbound IPv6
-    // and nodemailer's "family: 4" option is sometimes ignored or bypassed.
-    const { address } = await dns.promises.lookup('smtp.gmail.com', { family: 4 });
-
-    _transporter = nodemailer.createTransport({
-      host: address, // use the raw IPv4 address
-      port: 465,
-      secure: true,
-      auth: { user, pass },
-      tls: {
-        servername: 'smtp.gmail.com', // required when using IP for host
-      }
-    });
-
-  // Verify connection asynchronously (don't block)
-  if (!_transporterVerified) {
-    _transporter.verify()
-      .then(() => {
-        _transporterVerified = true;
-        console.log(`✅ Email transport verified and ready (${user})`);
-      })
-      .catch(err => {
-        console.error(`❌ Email transport verification FAILED for ${user}:`, err.message);
-        _transporter = null; // Reset so it retries next time
-      });
-  }
-
-  console.log(`📧 Email transport created (${user})`);
-  return _transporter;
-  } catch (err) {
-    console.error('❌ Failed to resolve or configure email transport:', err.message);
-    return null;
-  }
+  _resendClient = new Resend(apiKey);
+  console.log('📧 Resend email client initialized');
+  return _resendClient;
 }
 
 // ── Main function ──────────────────────────────────────────────────────────
@@ -112,16 +78,16 @@ export async function notifyEnrolledStudents({
     console.log(`🔔 Created ${inserted.length} notifications for ${courseCode} (${type})`);
 
     // 3. Send emails (fire-and-forget — don't block the request)
-    const transporter = await getTransporter();
-    if (!transporter) return;
+    const resend = getResendClient();
+    if (!resend) return;
 
     const emailPromises = validEnrollments.map(async (enrollment, idx) => {
       const student = enrollment.user;
       if (!student?.email) return;
 
       try {
-        await transporter.sendMail({
-          from: `"PAU LMS" <${process.env.EMAIL_USER}>`,
+        await resend.emails.send({
+          from: 'PAU LMS <onboarding@resend.dev>', // Free tier default allowed sender
           to: student.email,
           subject: `${courseCode}: ${title}`,
           html: buildEmailHtml({
@@ -140,7 +106,7 @@ export async function notifyEnrolledStudents({
           await Notification.updateOne({ _id: inserted[idx]._id }, { emailSent: true });
         }
       } catch (emailErr) {
-        console.warn(`📧 Failed to email ${student.email}:`, emailErr.message);
+        console.warn(`📧 Failed to email ${student.email} via Resend:`, emailErr.message);
       }
     });
 
@@ -197,14 +163,14 @@ export async function notifySpecificStudents({
     console.log(`🔔 Created ${inserted.length} reminder notifications for ${courseCode}`);
 
     // 3. Send emails
-    const transporter = await getTransporter();
-    if (!transporter) return;
+    const resend = getResendClient();
+    if (!resend) return;
 
     const emailPromises = students.map(async (student, idx) => {
       if (!student.email) return;
       try {
-        await transporter.sendMail({
-          from: `"PAU LMS" <${process.env.EMAIL_USER}>`,
+        await resend.emails.send({
+          from: 'PAU LMS <onboarding@resend.dev>',
           to: student.email,
           subject: `${courseCode}: ${title}`,
           html: buildEmailHtml({
@@ -221,7 +187,7 @@ export async function notifySpecificStudents({
           await Notification.updateOne({ _id: inserted[idx]._id }, { emailSent: true });
         }
       } catch (emailErr) {
-        console.warn(`📧 Failed to email ${student.email}:`, emailErr.message);
+        console.warn(`📧 Failed to email ${student.email} via Resend:`, emailErr.message);
       }
     });
 
