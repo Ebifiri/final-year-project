@@ -566,14 +566,12 @@ const SidebarContents = defineComponent({
               h('div', { class: 'flex-1 overflow-y-auto py-4 px-3' }, [
                 h('div', { class: 'space-y-1 mb-8' }, [
                   h(RouterLink, { to: '/',                onClick: props.onClose, class: 'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all' }, () => [h(HomeIcon,        { class: 'w-5 h-5 text-slate-400' }), h('span', 'Site home')]),
-                  h(RouterLink, { to: '/dashboard/home', onClick: props.onClose, class: 'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all' }, () => [h(LayoutDashboard, { class: 'w-5 h-5 text-slate-400' }), h('span', 'Dashboard')]),
+                  h(RouterLink, { to: auth.user?.role === 'admin' ? '/dashboard/admin' : '/dashboard/home', onClick: props.onClose, class: 'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all' }, () => [h(LayoutDashboard, { class: 'w-5 h-5 text-slate-400' }), h('span', 'Dashboard')]),
                   h(RouterLink, { to: '/courses',        onClick: props.onClose, class: 'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all' }, () => [h(BookMarked,      { class: 'w-5 h-5 text-slate-400' }), h('span', 'All courses')]),
-                  h(RouterLink, { to: '/grades',         onClick: props.onClose, class: 'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all' }, () => [h(Award,           { class: 'w-5 h-5 text-slate-400' }), h('span', ['lecturer','admin'].includes(auth.user?.role) ? 'Progress Reports' : 'Grades')]),
-                  h(RouterLink, { to: '/dashboard/ai',  onClick: props.onClose, class: 'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all cursor-pointer' }, () => [h(Sparkles,       { class: 'w-5 h-5 text-blue-500' }), h('span', 'AI Study Assistant')]),
-                  // Admin panel link
-                  auth.user?.role === 'admin' 
-                    ? h(RouterLink, { to: '/dashboard/admin', onClick: props.onClose, class: 'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-sm text-indigo-600 bg-indigo-50 hover:bg-indigo-100 hover:text-indigo-700 transition-all mt-2' }, () => [h(Shield, { class: 'w-5 h-5' }), h('span', 'Admin Panel')])
+                  auth.user?.role !== 'admin' 
+                    ? h(RouterLink, { to: '/grades', onClick: props.onClose, class: 'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all' }, () => [h(Award, { class: 'w-5 h-5 text-slate-400' }), h('span', auth.user?.role === 'lecturer' ? 'Progress Reports' : 'Grades')])
                     : null,
+                  h(RouterLink, { to: '/dashboard/ai',  onClick: props.onClose, class: 'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all cursor-pointer' }, () => [h(Sparkles,       { class: 'w-5 h-5 text-blue-500' }), h('span', 'AI Study Assistant')]),
                 ]),
                 // My enrolled courses
                 h('div', { class: 'px-3 mb-2' }, [

@@ -381,6 +381,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { useAuthStore } from '@/stores/auth';
 import { useRouter } from 'vue-router';
+import { api } from '@/api/client.js';
 import { Users, GraduationCap, BookOpen, Library, UserCheck, Shield, Search, UserPlus, Plus, Trash2, Edit2, X, Loader2, Building } from 'lucide-vue-next';
 
 const auth = useAuthStore();
@@ -433,37 +434,22 @@ const allLecturers = computed(() => users.value.filter(u => u.role === 'lecturer
 // Fetch Data
 const fetchStats = async () => {
   try {
-    const res = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/stats`, {
-      headers: { Authorization: `Bearer ${auth.token}` }
-    });
-    if (res.ok) {
-      const data = await res.json();
-      stats.value = data.stats;
-    }
+    const data = await api.get('/api/admin/stats');
+    stats.value = data.stats;
   } catch (err) { console.error(err); } finally { loadingStats.value = false; }
 };
 
 const fetchUsers = async () => {
   try {
-    const res = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/users`, {
-      headers: { Authorization: `Bearer ${auth.token}` }
-    });
-    if (res.ok) {
-      const data = await res.json();
-      users.value = data.users;
-    }
+    const data = await api.get('/api/admin/users');
+    users.value = data.users;
   } catch (err) { console.error(err); } finally { loadingUsers.value = false; }
 };
 
 const fetchCourses = async () => {
   try {
-    const res = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/courses`, {
-      headers: { Authorization: `Bearer ${auth.token}` }
-    });
-    if (res.ok) {
-      const data = await res.json();
-      courses.value = data.courses;
-    }
+    const data = await api.get('/api/admin/courses');
+    courses.value = data.courses;
   } catch (err) { console.error(err); } finally { loadingCourses.value = false; }
 };
 
@@ -482,24 +468,13 @@ const createUser = async () => {
   if (submitting.value) return;
   submitting.value = true;
   try {
-    const res = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/users`, {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${auth.token}` 
-      },
-      body: JSON.stringify(userForm.value)
-    });
-    if (res.ok) {
-      showUserModal.value = false;
-      userForm.value = { name: '', email: '', password: '', role: 'student' };
-      fetchUsers();
-      fetchStats();
-    } else {
-      const err = await res.json();
-      alert(err.message || 'Failed to create user');
-    }
+    await api.post('/api/admin/users', userForm.value);
+    showUserModal.value = false;
+    userForm.value = { name: '', email: '', password: '', role: 'student' };
+    fetchUsers();
+    fetchStats();
   } catch (err) {
+    alert(err.message || 'Failed to create user');
     console.error(err);
   } finally {
     submitting.value = false;
@@ -509,18 +484,13 @@ const createUser = async () => {
 const deleteUser = async (id) => {
   if (!confirm('Are you sure you want to permanently delete this user? All their submissions and enrollments will be lost.')) return;
   try {
-    const res = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/users/${id}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${auth.token}` }
-    });
-    if (res.ok) {
-      fetchUsers();
-      fetchStats();
-    } else {
-      const err = await res.json();
-      alert(err.message || 'Failed to delete user');
-    }
-  } catch (err) { console.error(err); }
+    await api.delete(`/api/admin/users/${id}`);
+    fetchUsers();
+    fetchStats();
+  } catch (err) {
+    alert(err.message || 'Failed to delete user');
+    console.error(err);
+  }
 };
 
 const openCourseModal = (course = null) => {
@@ -546,26 +516,19 @@ const saveCourse = async () => {
   if (submitting.value) return;
   submitting.value = true;
   const isEditing = !!courseForm.value._id;
-  const url = `${import.meta.env.VITE_API_URL}/api/admin/courses${isEditing ? `/${courseForm.value._id}` : ''}`;
+  const url = `/api/admin/courses${isEditing ? `/${courseForm.value._id}` : ''}`;
   
   try {
-    const res = await fetch(url, {
-      method: isEditing ? 'PUT' : 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${auth.token}` 
-      },
-      body: JSON.stringify(courseForm.value)
-    });
-    if (res.ok) {
-      showCourseModal.value = false;
-      fetchCourses();
-      if (!isEditing) fetchStats();
+    if (isEditing) {
+      await api.patch(url.replace('patch', 'put'), courseForm.value, { method: 'PUT' });
     } else {
-      const err = await res.json();
-      alert(err.message || 'Failed to save course');
+      await api.post(url, courseForm.value);
     }
+    showCourseModal.value = false;
+    fetchCourses();
+    if (!isEditing) fetchStats();
   } catch (err) {
+    alert(err.message || 'Failed to save course');
     console.error(err);
   } finally {
     submitting.value = false;
@@ -575,17 +538,12 @@ const saveCourse = async () => {
 const deleteCourse = async (id) => {
   if (!confirm('Are you sure you want to permanently delete this course? All associated enrollments and content will be affected.')) return;
   try {
-    const res = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/courses/${id}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${auth.token}` }
-    });
-    if (res.ok) {
-      fetchCourses();
-      fetchStats();
-    } else {
-      const err = await res.json();
-      alert(err.message || 'Failed to delete course');
-    }
-  } catch (err) { console.error(err); }
+    await api.delete(`/api/admin/courses/${id}`);
+    fetchCourses();
+    fetchStats();
+  } catch (err) {
+    alert(err.message || 'Failed to delete course');
+    console.error(err);
+  }
 };
 </script>
