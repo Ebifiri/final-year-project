@@ -18,12 +18,13 @@
 import Notification from '../models/Notification.js';
 import Enrollment   from '../models/Enrollment.js';
 import nodemailer   from 'nodemailer';
+import dns          from 'dns';
 
 // ── Email transporter (created lazily, cached) ──────────────────────────────
 let _transporter = null;
 let _transporterVerified = false;
 
-function getTransporter() {
+async function getTransporter() {
   if (_transporter) return _transporter;
 
   const user = process.env.EMAIL_USER;
@@ -33,15 +34,20 @@ function getTransporter() {
     return null;
   }
 
-  _transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 465,
-    secure: true,
-    auth: { user, pass },
-    // Force IPv4 — Render doesn't support outbound IPv6 connections,
-    // which causes ENETUNREACH when Gmail resolves to an IPv6 address
-    family: 4,
-  });
+  try {
+    // Explicitly resolve to IPv4 because Render does not support outbound IPv6
+    // and nodemailer's "family: 4" option is sometimes ignored or bypassed.
+    const { address } = await dns.promises.lookup('smtp.gmail.com', { family: 4 });
+
+    _transporter = nodemailer.createTransport({
+      host: address, // use the raw IPv4 address
+      port: 465,
+      secure: true,
+      auth: { user, pass },
+      tls: {
+        servername: 'smtp.gmail.com', // required when using IP for host
+      }
+    });
 
   // Verify connection asynchronously (don't block)
   if (!_transporterVerified) {
@@ -58,6 +64,10 @@ function getTransporter() {
 
   console.log(`📧 Email transport created (${user})`);
   return _transporter;
+  } catch (err) {
+    console.error('❌ Failed to resolve or configure email transport:', err.message);
+    return null;
+  }
 }
 
 // ── Main function ──────────────────────────────────────────────────────────
@@ -102,7 +112,7 @@ export async function notifyEnrolledStudents({
     console.log(`🔔 Created ${inserted.length} notifications for ${courseCode} (${type})`);
 
     // 3. Send emails (fire-and-forget — don't block the request)
-    const transporter = getTransporter();
+    const transporter = await getTransporter();
     if (!transporter) return;
 
     const emailPromises = validEnrollments.map(async (enrollment, idx) => {
@@ -186,7 +196,8 @@ export async function notifySpecificStudents({
     const inserted = await Notification.insertMany(notifDocs);
     console.log(`🔔 Created ${inserted.length} reminder notifications for ${courseCode}`);
 
-    const transporter = getTransporter();
+    // 3. Send emails
+    const transporter = await getTransporter();
     if (!transporter) return;
 
     const emailPromises = students.map(async (student, idx) => {
