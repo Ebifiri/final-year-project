@@ -273,6 +273,15 @@
           <HeaderNavItem title="PAU Website" :has-dropdown="false" href="https://pau.edu.ng" />
           <HeaderNavItem title="Apply to PAU" :has-dropdown="false" href="https://apply.pau.edu.ng" />
         </div>
+        <!-- Announcement Banner -->
+        <a 
+          href="https://forms.gle/D8qXbv7VTTHVXeKC9" 
+          target="_blank" 
+          rel="noopener noreferrer" 
+          class="block bg-red-600 hover:bg-red-700 text-white py-2 px-4 text-center text-xs sm:text-sm font-semibold tracking-wide transition-colors hover:underline shrink-0"
+        >
+          Please fill out this form after using the site 🤞
+        </a>
       </header>
 
       <!-- PAGE CONTENT + FOOTER -->
