@@ -75,9 +75,9 @@
                 >
                   <Bell class="w-5 h-5" />
                   <span
-                    v-if="notifStore.unreadCount > 0"
+                    v-if="notifStore.unreadAlertsCount > 0"
                     class="absolute top-1 right-1 min-w-[16px] h-4 bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-[#1e293b] px-0.5"
-                  >{{ notifStore.unreadCount > 99 ? '99+' : notifStore.unreadCount }}</span>
+                  >{{ notifStore.unreadAlertsCount > 99 ? '99+' : notifStore.unreadAlertsCount }}</span>
                 </button>
 
                 <!-- Notification dropdown panel -->
@@ -97,13 +97,22 @@
                     <!-- Panel header -->
                     <div class="flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-slate-50">
                       <h3 class="text-sm font-bold text-slate-800">Notifications</h3>
-                      <button
-                        v-if="notifStore.unreadCount > 0"
-                        class="text-xs text-blue-600 hover:text-blue-800 font-semibold transition-colors cursor-pointer"
-                        @click="handleMarkAllRead"
-                      >
-                        Mark all read
-                      </button>
+                      <div class="flex items-center gap-3">
+                        <button
+                          v-if="notifStore.unreadAlertsCount > 0"
+                          class="text-xs text-blue-600 hover:text-blue-800 font-semibold transition-colors cursor-pointer"
+                          @click="handleMarkAllRead"
+                        >
+                          Mark all read
+                        </button>
+                        <button
+                          v-if="notifStore.alerts.length > 0"
+                          class="text-xs text-red-600 hover:text-red-800 font-semibold transition-colors cursor-pointer"
+                          @click="notifStore.clearAll(false)"
+                        >
+                          Clear All
+                        </button>
+                      </div>
                     </div>
 
                     <!-- Notification list -->
@@ -115,14 +124,14 @@
                         <div class="w-5 h-5 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin" />
                       </div>
 
-                      <div v-else-if="!notifStore.notifications.length" class="py-10 text-center">
+                      <div v-else-if="!notifStore.alerts.length" class="py-10 text-center">
                         <Bell class="w-8 h-8 text-slate-300 mx-auto mb-2" />
                         <p class="text-sm text-slate-400">No notifications yet</p>
                       </div>
 
                       <template v-else>
                         <button
-                          v-for="n in notifStore.notifications.slice(0, 15)"
+                          v-for="n in notifStore.alerts.slice(0, 15)"
                           :key="n._id"
                           class="w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-slate-50 transition-colors"
                           :class="n.read ? 'opacity-60' : ''"
@@ -150,9 +159,84 @@
                 </Transition>
               </div>
 
-              <button v-if="isLoggedIn" class="relative p-2 text-slate-300 hover:bg-slate-800 rounded-full transition-colors">
-                <Mail class="w-5 h-5" />
-              </button>
+              <!-- Mail bell -->
+              <div v-if="isLoggedIn" class="relative" ref="mailRef">
+                <button
+                  class="relative p-2 text-slate-300 hover:bg-slate-800 rounded-full transition-colors"
+                  @click="toggleMailPanel"
+                >
+                  <Mail class="w-5 h-5" />
+                  <span
+                    v-if="notifStore.unreadMessagesCount > 0"
+                    class="absolute top-1 right-1 min-w-[16px] h-4 bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-[#1e293b] px-0.5"
+                  >{{ notifStore.unreadMessagesCount > 99 ? '99+' : notifStore.unreadMessagesCount }}</span>
+                </button>
+
+                <!-- Mail dropdown panel -->
+                <Transition
+                  enter-active-class="transition-all duration-200 ease-out"
+                  enter-from-class="opacity-0 translate-y-2 scale-95"
+                  enter-to-class="opacity-100 translate-y-0 scale-100"
+                  leave-active-class="transition-all duration-150 ease-in"
+                  leave-from-class="opacity-100 translate-y-0 scale-100"
+                  leave-to-class="opacity-0 translate-y-2 scale-95"
+                >
+                  <div
+                    v-if="isMailOpen"
+                    class="absolute right-0 sm:right-0 mt-2 w-[calc(100vw-2rem)] xs:w-80 sm:w-96 max-w-[24rem] bg-white rounded-2xl shadow-2xl border border-slate-200 z-50 overflow-hidden"
+                    style="right: -8px;"
+                  >
+                    <!-- Panel header -->
+                    <div class="flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-slate-50">
+                      <h3 class="text-sm font-bold text-slate-800">Messages & Feedback</h3>
+                      <button
+                        v-if="notifStore.messages.length > 0"
+                        class="text-xs text-red-600 hover:text-red-800 font-semibold transition-colors cursor-pointer"
+                        @click="notifStore.clearAll('feedback')"
+                      >
+                        Clear All
+                      </button>
+                    </div>
+
+                    <!-- Message list -->
+                    <div class="max-h-80 overflow-y-auto divide-y divide-slate-50">
+                      <div
+                        v-if="!notifStore.loaded"
+                        class="flex items-center justify-center py-8"
+                      >
+                        <div class="w-5 h-5 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin" />
+                      </div>
+
+                      <div v-else-if="!notifStore.messages.length" class="py-10 text-center">
+                        <Mail class="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                        <p class="text-sm text-slate-400">No messages</p>
+                      </div>
+
+                      <template v-else>
+                        <button
+                          v-for="n in notifStore.messages.slice(0, 15)"
+                          :key="n._id"
+                          class="w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-slate-50 transition-colors"
+                          :class="n.read ? 'opacity-60' : ''"
+                          @click="handleMailClick(n)"
+                        >
+                          <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 bg-sky-50 text-sky-600 border border-sky-100">
+                            <Mail class="w-4 h-4" />
+                          </div>
+                          <div class="min-w-0 flex-1">
+                            <p class="text-sm font-medium text-slate-800 truncate" :class="{ 'font-bold': !n.read }">{{ n.title }}</p>
+                            <p v-if="n.courseId?.title" class="text-[11px] text-indigo-500 font-medium truncate mt-0.5">{{ n.courseId.code }} — {{ n.courseId.title }}</p>
+                            <p v-if="n.body" class="text-xs text-slate-500 truncate mt-0.5">{{ n.body }}</p>
+                            <p class="text-[10px] text-slate-400 mt-1">{{ timeAgo(n.createdAt) }}</p>
+                          </div>
+                          <!-- Unread dot -->
+                          <div v-if="!n.read" class="w-2 h-2 rounded-full bg-blue-600 flex-shrink-0 mt-2" />
+                        </button>
+                      </template>
+                    </div>
+                  </div>
+                </Transition>
+              </div>
 
               <!-- Login button (guest only) -->
               <RouterLink
@@ -231,11 +315,22 @@ function handleLogout() {
 
 // ── Notification panel ────────────────────────────────────────────────────────
 const isNotifOpen = ref(false);
+const isMailOpen  = ref(false);
 const bellRef     = ref(null);
+const mailRef     = ref(null);
 
 function toggleNotifPanel() {
   isNotifOpen.value = !isNotifOpen.value;
+  isMailOpen.value = false;
   if (isNotifOpen.value && !notifStore.loaded) {
+    notifStore.fetchNotifications();
+  }
+}
+
+function toggleMailPanel() {
+  isMailOpen.value = !isMailOpen.value;
+  isNotifOpen.value = false;
+  if (isMailOpen.value && !notifStore.loaded) {
     notifStore.fetchNotifications();
   }
 }
@@ -243,6 +338,12 @@ function toggleNotifPanel() {
 function handleNotifClick(n) {
   if (!n.read) notifStore.markRead(n._id);
   isNotifOpen.value = false;
+  if (n.link) router.push(n.link);
+}
+
+function handleMailClick(n) {
+  if (!n.read) notifStore.markRead(n._id);
+  isMailOpen.value = false;
   if (n.link) router.push(n.link);
 }
 
@@ -254,6 +355,9 @@ function handleMarkAllRead() {
 function onDocClick(e) {
   if (bellRef.value && !bellRef.value.contains(e.target)) {
     isNotifOpen.value = false;
+  }
+  if (mailRef.value && !mailRef.value.contains(e.target)) {
+    isMailOpen.value = false;
   }
 }
 

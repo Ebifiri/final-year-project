@@ -4,7 +4,7 @@ import Course      from '../models/Course.js';
 import Submission  from '../models/Submission.js';
 import Enrollment  from '../models/Enrollment.js';
 import protect     from '../middleware/auth.js';
-import { notifyEnrolledStudents } from '../utils/notifyEnrolledStudents.js';
+import { notifyEnrolledStudents, notifySpecificStudents } from '../utils/notifyEnrolledStudents.js';
 
 const router = express.Router();
 
@@ -95,6 +95,28 @@ router.patch('/:id/submissions/:subId', protect, async (req, res) => {
       { grade: req.body.grade, feedback: req.body.feedback, gradedBy: req.user._id },
       { new: true }
     );
+
+    if (submission) {
+      const assignment = await Assignment.findById(submission.assignmentId).populate('courseId');
+      if (assignment) {
+        let notificationBody = `Your assignment "${assignment.title}" has been graded.`;
+        if (req.body.feedback) {
+          notificationBody += `\nFeedback: ${req.body.feedback}`;
+        }
+
+        // We use type 'feedback' so the frontend can route it to the mail icon
+        await notifySpecificStudents({
+          courseId: assignment.courseId._id,
+          courseCode: assignment.courseId.code,
+          courseName: assignment.courseId.title,
+          type: 'feedback',
+          title: 'Assignment Graded',
+          body: notificationBody,
+          userIds: [submission.studentId],
+        });
+      }
+    }
+
     res.json({ submission });
   } catch (err) {
     res.status(500).json({ message: err.message });

@@ -22,8 +22,9 @@ router.get('/', protect, async (req, res) => {
 // Returns { count: N } — used by the navbar badge.
 router.get('/unread-count', protect, async (req, res) => {
   try {
-    const count = await Notification.countDocuments({ userId: req.user._id, read: false });
-    res.json({ count });
+    const unreadAlerts = await Notification.countDocuments({ userId: req.user._id, read: false, type: { $ne: 'feedback' } });
+    const unreadMessages = await Notification.countDocuments({ userId: req.user._id, read: false, type: 'feedback' });
+    res.json({ unreadAlerts, unreadMessages });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -54,6 +55,24 @@ router.patch('/read-all', protect, async (req, res) => {
       { read: true }
     );
     res.json({ message: 'All notifications marked as read' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// ── DELETE /api/notifications ──────────────────────────────────────────────────
+// Clear all notifications for the user. Optionally filter by type.
+router.delete('/', protect, async (req, res) => {
+  try {
+    const filter = { userId: req.user._id };
+    if (req.query.type) {
+      filter.type = req.query.type;
+    } else if (req.query.excludeType) {
+      filter.type = { $ne: req.query.excludeType };
+    }
+    
+    await Notification.deleteMany(filter);
+    res.json({ message: 'Notifications cleared successfully' });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
