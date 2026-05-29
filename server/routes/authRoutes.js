@@ -65,10 +65,11 @@ if (process.env.MICROSOFT_CLIENT_ID && process.env.MICROSOFT_CLIENT_SECRET) {
       clientID:         process.env.MICROSOFT_CLIENT_ID,
       clientSecret:     process.env.MICROSOFT_CLIENT_SECRET,
       callbackURL:      `${process.env.BACKEND_URL}/api/auth/microsoft/callback`,
-      scope:            ['openid', 'profile', 'email'],
+      scope:            ['openid', 'profile', 'email', 'User.Read'],
       tenant:           'common',
       authorizationURL: 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize',
       tokenURL:         'https://login.microsoftonline.com/common/oauth2/v2.0/token',
+      addUPNAsEmail:    true,
     },
     async (_at, _rt, profile, done) => {
       try {
@@ -187,15 +188,27 @@ router.get('/microsoft/callback', (req, res, next) => {
   passport.authenticate('microsoft', { session: false }, (err, user, info) => {
     if (err) {
       console.error('[Microsoft OAuth] Callback authentication error:', err);
-      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/login?error=oauth`);
+      const msg = encodeURIComponent(err.message || 'Unknown error during Microsoft login');
+      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/login?error=oauth&detail=${msg}`);
     }
     if (!user) {
-      console.error('[Microsoft OAuth] No user returned. Info:', info);
-      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/login?error=oauth`);
+      console.error('[Microsoft OAuth] No user returned. Info:', JSON.stringify(info));
+      const msg = encodeURIComponent(info?.message || 'Microsoft did not return a user');
+      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/login?error=oauth&detail=${msg}`);
     }
     const token = signToken(user._id);
     res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/auth/callback?token=${token}`);
   })(req, res, next);
+});
+
+// ── Debug: check configured OAuth callback URLs ──────────────────────────────
+router.get('/debug/config', (req, res) => {
+  res.json({
+    microsoft_callback: microsoftConfigured ? `${process.env.BACKEND_URL}/api/auth/microsoft/callback` : 'NOT CONFIGURED',
+    google_callback: googleConfigured ? `${process.env.BACKEND_URL}/api/auth/google/callback` : 'NOT CONFIGURED',
+    frontend_url: process.env.FRONTEND_URL,
+    backend_url: process.env.BACKEND_URL,
+  });
 });
 
 export default router;

@@ -54,7 +54,7 @@
             OAuth sign-in hasn't been configured on this server yet. Please use email/password.
           </p>
           <p v-else-if="oauthError" class="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-            OAuth sign-in failed. Please try again or use email/password.
+            OAuth sign-in failed{{ oauthDetail ? `: ${oauthDetail}` : '' }}. Please try again or use email/password.
           </p>
 
           <!-- Login button -->
@@ -144,6 +144,7 @@ const oauthError = computed(() => {
   if (e === 'oauth') return 'failed';
   return null;
 });
+const oauthDetail = computed(() => route.query.detail || '');
 
 async function handleLogin() {
   const ok = await auth.login(email.value, password.value);
