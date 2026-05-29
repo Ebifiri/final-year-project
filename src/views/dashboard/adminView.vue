@@ -273,7 +273,7 @@
           </div>
           <div>
             <label class="block text-sm font-medium text-slate-700 mb-1">Password</label>
-            <input v-model="userForm.password" required type="password" minlength="6" class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            <input v-model="userForm.password" :required="!userForm._id" type="password" minlength="6" :placeholder="userForm._id ? 'Leave blank to keep current password' : ''" class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
           </div>
           <div>
             <label class="block text-sm font-medium text-slate-700 mb-1">Role</label>

@@ -95,13 +95,16 @@ router.post('/users', async (req, res) => {
 // ── PUT /api/admin/users/:id ──────────────────────────────────────────────────
 router.put('/users/:id', async (req, res) => {
   try {
-    const { name, email, role, activeCourses } = req.body;
+    const { name, email, role, activeCourses, password } = req.body;
     const user = await User.findById(req.params.id);
     if (!user) return res.status(404).json({ message: 'User not found' });
 
     // Update user info
     user.name = name || user.name;
     user.email = email || user.email;
+    if (password) {
+      user.password = password;
+    }
     
     // Changing roles is complicated because of related data, but we can allow it if needed,
     // though for safety we might just update course associations based on their current role.
