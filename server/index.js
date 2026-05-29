@@ -21,6 +21,7 @@ import submissionRoutes  from './routes/submissionRoutes.js';
 import quizRoutes        from './routes/quizRoutes.js';
 import aiRoutes          from './routes/aiRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
+import progressRoutes    from './routes/progressRoutes.js';
 
 import { startReminderCron } from './utils/reminders.js';
 
@@ -53,6 +54,7 @@ app.use('/api/submissions', submissionRoutes);
 app.use('/api/quizzes',     quizRoutes);
 app.use('/api/ai',            aiRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/progress',      progressRoutes);
 
 // ── Health check ─────────────────────────────────────────────────────────────
 app.get('/api/health', (_, res) => res.json({
