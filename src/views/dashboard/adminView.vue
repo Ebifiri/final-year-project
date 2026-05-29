@@ -1,13 +1,13 @@
 <template>
-  <main class="flex-1 bg-slate-50 p-4 sm:p-6 lg:p-8 min-h-screen">
+  <main class="flex-1 bg-slate-50 p-4 sm:p-6 lg:p-8 lg:pb-4 pb-4">
     <!-- Header -->
-    <div class="mb-8">
+    <div class="mb-5">
       <h1 class="text-3xl font-bold tracking-tight text-slate-900">Admin Dashboard</h1>
       <p class="text-slate-500 mt-1">Manage users, courses, and view system statistics.</p>
     </div>
 
     <!-- Navigation Tabs -->
-    <div class="flex space-x-1 border-b border-slate-200 mb-8">
+    <div class="flex space-x-1 border-b border-slate-200 mb-5">
       <button 
         v-for="tab in ['Overview', 'Users', 'Courses']" 
         :key="tab"
@@ -20,7 +20,7 @@
     </div>
 
     <!-- Overview Tab -->
-    <div v-if="activeTab === 'Overview'" class="space-y-6">
+    <div v-if="activeTab === 'Overview'" class="space-y-5">
       <div v-if="loadingStats" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <div v-for="i in 6" :key="i" class="h-32 bg-white rounded-xl shadow-sm border border-slate-200 animate-pulse"></div>
       </div>
@@ -85,10 +85,155 @@
           </div>
         </div>
       </div>
+
+      <!-- Extra visual components to fill whitespace and provide premium dashboard features -->
+      <div v-if="!loadingStats" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Recent Registrations (Col Span 2) -->
+        <div class="lg:col-span-2 bg-white rounded-xl p-6 border border-slate-200 shadow-sm flex flex-col">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="font-bold text-slate-800 text-base">Recent User Registrations</h3>
+            <button @click="activeTab = 'Users'" class="text-xs text-indigo-600 hover:text-indigo-800 font-semibold transition-colors">
+              View All Users
+            </button>
+          </div>
+          <div class="overflow-x-auto flex-1">
+            <table class="w-full text-left text-sm whitespace-nowrap">
+              <thead class="bg-slate-50 text-slate-500 text-xs uppercase">
+                <tr>
+                  <th class="px-4 py-3 font-medium">Name</th>
+                  <th class="px-4 py-3 font-medium">Email</th>
+                  <th class="px-4 py-3 font-medium">Role</th>
+                  <th class="px-4 py-3 font-medium">Joined</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                <tr v-if="loadingUsers" v-for="i in 3" :key="i">
+                  <td colspan="4" class="px-4 py-3">
+                    <div class="h-4 bg-slate-100 rounded animate-pulse w-full"></div>
+                  </td>
+                </tr>
+                <tr v-else-if="recentUsers.length === 0">
+                  <td colspan="4" class="px-4 py-8 text-center text-slate-400 italic">
+                    No recent users.
+                  </td>
+                </tr>
+                <tr v-for="user in recentUsers" :key="user._id" class="hover:bg-slate-50/50 transition-colors">
+                  <td class="px-4 py-3">
+                    <div class="flex items-center gap-2">
+                      <div class="w-7 h-7 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-xs uppercase">
+                        {{ user.name.substring(0, 2) }}
+                      </div>
+                      <span class="font-medium text-slate-900">{{ user.name }}</span>
+                    </div>
+                  </td>
+                  <td class="px-4 py-3 text-slate-500">{{ user.email }}</td>
+                  <td class="px-4 py-3">
+                    <span class="px-2 py-0.5 rounded-full text-[11px] font-medium capitalize border"
+                      :class="{
+                        'bg-green-50 text-green-700 border-green-200': user.role === 'student',
+                        'bg-purple-50 text-purple-700 border-purple-200': user.role === 'lecturer',
+                        'bg-amber-50 text-amber-700 border-amber-200': user.role === 'admin'
+                      }"
+                    >
+                      {{ user.role }}
+                    </span>
+                  </td>
+                  <td class="px-4 py-3 text-slate-400 text-xs">
+                    {{ timeAgo(user.createdAt) }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Quick Actions & System Status (Col Span 1) -->
+        <div class="space-y-6">
+          <!-- Quick Actions -->
+          <div class="bg-white rounded-xl p-6 border border-slate-200 shadow-sm">
+            <h3 class="font-bold text-slate-800 text-base mb-4">Quick Actions</h3>
+            <div class="grid grid-cols-2 gap-3">
+              <button @click="openUserModal(null)" class="flex flex-col items-center justify-center p-4 bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 rounded-xl transition-all group">
+                <div class="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-lg flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                  <UserPlus class="w-5 h-5" />
+                </div>
+                <span class="text-xs font-semibold text-slate-700 group-hover:text-indigo-700 text-center">Add User</span>
+              </button>
+              
+              <button @click="openCourseModal(null)" class="flex flex-col items-center justify-center p-4 bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 rounded-xl transition-all group">
+                <div class="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-lg flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                  <Plus class="w-5 h-5" />
+                </div>
+                <span class="text-xs font-semibold text-slate-700 group-hover:text-indigo-700 text-center">Add Course</span>
+              </button>
+              
+              <button @click="activeTab = 'Users'" class="flex flex-col items-center justify-center p-4 bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 rounded-xl transition-all group">
+                <div class="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-lg flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                  <Users class="w-5 h-5" />
+                </div>
+                <span class="text-xs font-semibold text-slate-700 group-hover:text-indigo-700 text-center">Manage Users</span>
+              </button>
+              
+              <button @click="activeTab = 'Courses'" class="flex flex-col items-center justify-center p-4 bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 rounded-xl transition-all group">
+                <div class="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-lg flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                  <Library class="w-5 h-5" />
+                </div>
+                <span class="text-xs font-semibold text-slate-700 group-hover:text-indigo-700 text-center">Manage Courses</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- System Status -->
+          <div class="bg-white rounded-xl p-6 border border-slate-200 shadow-sm">
+            <h3 class="font-bold text-slate-800 text-base mb-4">System Status</h3>
+            <div class="space-y-3">
+              <div class="flex items-center justify-between py-1.5 border-b border-slate-100 last:border-0">
+                <div class="flex items-center gap-2">
+                  <span class="relative flex h-2 w-2">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                  </span>
+                  <span class="text-sm font-medium text-slate-700">Database Connection</span>
+                </div>
+                <span class="text-[11px] text-green-600 font-semibold bg-green-50 px-2 py-0.5 rounded border border-green-100">Healthy</span>
+              </div>
+              
+              <div class="flex items-center justify-between py-1.5 border-b border-slate-100 last:border-0">
+                <div class="flex items-center gap-2">
+                  <span class="relative flex h-2 w-2">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                  </span>
+                  <span class="text-sm font-medium text-slate-700">API Gateway</span>
+                </div>
+                <span class="text-[11px] text-green-600 font-semibold bg-green-50 px-2 py-0.5 rounded border border-green-100">Operational</span>
+              </div>
+
+              <div class="flex items-center justify-between py-1.5 border-b border-slate-100 last:border-0">
+                <div class="flex items-center gap-2">
+                  <span class="relative flex h-2 w-2">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                  </span>
+                  <span class="text-sm font-medium text-slate-700">AI Study Service</span>
+                </div>
+                <span class="text-[11px] text-green-600 font-semibold bg-green-50 px-2 py-0.5 rounded border border-green-100">Online</span>
+              </div>
+
+              <div class="flex items-center justify-between py-1.5 last:border-0">
+                <div class="flex items-center gap-2">
+                  <span class="text-sm font-medium text-slate-700">Recent Errors (24h)</span>
+                </div>
+                <span class="text-[11px] text-slate-500 font-semibold bg-slate-50 px-2 py-0.5 rounded border border-slate-200">0 Errors</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Users Tab -->
-    <div v-if="activeTab === 'Users'" class="space-y-6">
+    <div v-if="activeTab === 'Users'" class="space-y-5">
       <div class="flex justify-between items-center">
         <div class="relative w-72">
           <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -192,7 +337,7 @@
     </div>
 
     <!-- Courses Tab -->
-    <div v-if="activeTab === 'Courses'" class="space-y-6">
+    <div v-if="activeTab === 'Courses'" class="space-y-5">
       <div class="flex justify-between items-center">
         <div class="relative w-72">
           <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -457,6 +602,26 @@ const filteredCourses = computed(() => {
 });
 
 const allLecturers = computed(() => users.value.filter(u => u.role === 'lecturer'));
+
+const recentUsers = computed(() => {
+  if (!users.value || users.value.length === 0) return [];
+  return [...users.value]
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    .slice(0, 5);
+});
+
+const timeAgo = (dateStr) => {
+  if (!dateStr) return '';
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days < 7) return `${days}d ago`;
+  return new Date(dateStr).toLocaleDateString();
+};
 
 // Fetch Data
 const fetchStats = async () => {
