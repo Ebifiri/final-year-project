@@ -58,6 +58,10 @@ router.post('/', protect, async (req, res) => {
     const course = await Course.findOne({ code: courseCode?.toUpperCase() });
     if (!course) return res.status(404).json({ message: 'Course not found' });
 
+    if (req.user.role !== 'admin' && !course.lecturers?.some(id => id.toString() === req.user._id.toString())) {
+      return res.status(403).json({ message: 'You are not assigned to this course' });
+    }
+
     const quiz = await Quiz.create({
       courseId: course._id, title, description, dueDate, durationMinutes,
       opensAt: opensAt || undefined, closesAt: closesAt || undefined,
@@ -393,6 +397,12 @@ router.get('/:id/attempts', protect, async (req, res) => {
   try {
     if (!['lecturer', 'admin'].includes(req.user.role)) {
       return res.status(403).json({ message: 'Not authorised' });
+    }
+    const quiz = await Quiz.findById(req.params.id).populate('courseId');
+    if (!quiz) return res.status(404).json({ message: 'Quiz not found' });
+
+    if (req.user.role !== 'admin' && !quiz.courseId.lecturers?.some(id => id.toString() === req.user._id.toString())) {
+      return res.status(403).json({ message: 'You are not assigned to this course' });
     }
     const attempts = await QuizAttempt.find({ quizId: req.params.id })
       .populate('studentId', 'name email');

@@ -47,6 +47,10 @@ router.post('/', protect, async (req, res) => {
     const course = await Course.findOne({ code: courseCode?.toUpperCase() });
     if (!course) return res.status(404).json({ message: 'Course not found' });
 
+    if (req.user.role !== 'admin' && !course.lecturers?.some(id => id.toString() === req.user._id.toString())) {
+      return res.status(403).json({ message: 'You are not assigned to this course' });
+    }
+
     const assignment = await Assignment.create({
       courseId: course._id, title, description, dueDate, totalPoints,
       opensAt: opensAt || undefined, closesAt: closesAt || undefined,
@@ -76,8 +80,12 @@ router.get('/:id/submissions', protect, async (req, res) => {
     if (!['lecturer', 'admin'].includes(req.user.role)) {
       return res.status(403).json({ message: 'Not authorised' });
     }
-    const assignment = await Assignment.findById(req.params.id);
+    const assignment = await Assignment.findById(req.params.id).populate('courseId');
     if (!assignment) return res.status(404).json({ message: 'Assignment not found' });
+
+    if (req.user.role !== 'admin' && !assignment.courseId.lecturers?.some(id => id.toString() === req.user._id.toString())) {
+      return res.status(403).json({ message: 'You are not assigned to this course' });
+    }
 
     // Fetch all students enrolled in the course
     const enrollments = await Enrollment.find({ course: assignment.courseId }).populate('user', 'name email');
@@ -115,6 +123,13 @@ router.patch('/:id/submissions/:subId', protect, async (req, res) => {
   try {
     if (!['lecturer', 'admin'].includes(req.user.role)) {
       return res.status(403).json({ message: 'Not authorised' });
+    }
+
+    const assignment = await Assignment.findById(req.params.id).populate('courseId');
+    if (!assignment) return res.status(404).json({ message: 'Assignment not found' });
+
+    if (req.user.role !== 'admin' && !assignment.courseId.lecturers?.some(id => id.toString() === req.user._id.toString())) {
+      return res.status(403).json({ message: 'You are not assigned to this course' });
     }
 
     let submission;

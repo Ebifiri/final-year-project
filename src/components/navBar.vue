@@ -286,10 +286,7 @@ import { ref, computed, defineComponent, h, watch, onMounted, onUnmounted } from
 import { RouterLink, useRouter } from 'vue-router';
 import {
   Bell, Mail, ChevronDown, ChevronRight, Search, Menu, LogIn,
-  LayoutDashboard, Home as HomeIcon,
-  Calendar, BookMarked, MonitorPlay, Shield,
-  X, Settings, LogOut, Sparkles,
-  FileText, ClipboardList, HelpCircle, Megaphone, Award,
+  LayoutDashboard, LogOut, Award, X, BookMarked, Home as HomeIcon, Settings, Calendar, ChevronLeft, CheckCircle2, MonitorPlay, Sparkles, Shield
 } from 'lucide-vue-next';
 import { useAuthStore }         from '@/stores/auth.js';
 import { useEnrollmentStore }   from '@/stores/enrollments.js';
@@ -573,6 +570,10 @@ const SidebarContents = defineComponent({
                   h(RouterLink, { to: '/courses',        onClick: props.onClose, class: 'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all' }, () => [h(BookMarked,      { class: 'w-5 h-5 text-slate-400' }), h('span', 'All courses')]),
                   h(RouterLink, { to: '/grades',         onClick: props.onClose, class: 'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all' }, () => [h(Award,           { class: 'w-5 h-5 text-slate-400' }), h('span', ['lecturer','admin'].includes(auth.user?.role) ? 'Progress Reports' : 'Grades')]),
                   h(RouterLink, { to: '/dashboard/ai',  onClick: props.onClose, class: 'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all cursor-pointer' }, () => [h(Sparkles,       { class: 'w-5 h-5 text-blue-500' }), h('span', 'AI Study Assistant')]),
+                  // Admin panel link
+                  auth.user?.role === 'admin' 
+                    ? h(RouterLink, { to: '/dashboard/admin', onClick: props.onClose, class: 'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-sm text-indigo-600 bg-indigo-50 hover:bg-indigo-100 hover:text-indigo-700 transition-all mt-2' }, () => [h(Shield, { class: 'w-5 h-5' }), h('span', 'Admin Panel')])
+                    : null,
                 ]),
                 // My enrolled courses
                 h('div', { class: 'px-3 mb-2' }, [
