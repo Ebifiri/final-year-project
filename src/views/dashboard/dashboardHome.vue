@@ -1,5 +1,6 @@
 <template>
-  <main class="flex-1 bg-slate-50 p-6 lg:p-8">
+  <AdminView v-if="auth.user?.role === 'admin'" />
+  <main v-else class="flex-1 bg-slate-50 p-6 lg:p-8">
 
     <!-- Page heading -->
     <div class="mb-6">
@@ -340,6 +341,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { RouterLink } from 'vue-router';
+import AdminView from './adminView.vue';
 import {
   Clock, BookOpen, ChevronLeft, ChevronRight,
   ListTodo, MonitorPlay, CalendarDays,
@@ -353,10 +355,14 @@ import { api }                from '@/api/client.js';
 const auth            = useAuthStore();
 const enrollmentStore = useEnrollmentStore();
 
-const isLecturer = computed(() => ['lecturer', 'admin'].includes(auth.user?.role));
+const isLecturer = computed(() => auth.user?.role === 'lecturer');
 const dismissedDeadlineIds = ref([]);
 
 onMounted(async () => {
+  if (auth.user?.role === 'admin') {
+    return;
+  }
+
   if (auth.user?._id) {
     const saved = localStorage.getItem(`dismissed-deadlines-${auth.user._id}`);
     if (saved) {
