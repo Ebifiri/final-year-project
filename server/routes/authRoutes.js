@@ -60,25 +60,39 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
 
 // ── Passport: Microsoft ───────────────────────────────────────────────────────
 if (process.env.MICROSOFT_CLIENT_ID && process.env.MICROSOFT_CLIENT_SECRET) {
-  passport.use(new MicrosoftStrategy(
+  const msStrategy = new MicrosoftStrategy(
     {
       clientID:         process.env.MICROSOFT_CLIENT_ID,
       clientSecret:     process.env.MICROSOFT_CLIENT_SECRET,
       callbackURL:      `${process.env.BACKEND_URL}/api/auth/microsoft/callback`,
-      scope:            ['openid', 'profile', 'email', 'User.Read'],
+      scope:            ['openid', 'profile', 'email'], // Removed User.Read so we don't trigger admin consent errors
       tenant:           'common',
       authorizationURL: 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize',
       tokenURL:         'https://login.microsoftonline.com/common/oauth2/v2.0/token',
-      addUPNAsEmail:    true,
     },
-    async (_at, _rt, profile, done) => {
+    async (accessToken, refreshToken, params, profile, done) => {
       try {
-        console.log('[Microsoft OAuth] Profile received:', JSON.stringify({ id: profile.id, displayName: profile.displayName, emails: profile.emails }, null, 2));
+        // Decode the id_token JWT directly to bypass Microsoft Graph API.
+        // This avoids "Authorization_RequestDenied" when the tenant admin disables user consent for User.Read.
+        const idToken = params?.id_token;
+        let decoded = null;
+        if (idToken) {
+          decoded = jwt.decode(idToken);
+        }
+
+        console.log('[Microsoft OAuth] Decoded ID Token:', JSON.stringify(decoded, null, 2));
+        
+        const oauthId = decoded?.oid || profile?.id;
+        const name    = decoded?.name || profile?.displayName || 'Microsoft User';
+        const email   = decoded?.preferred_username || decoded?.email || profile?.emails?.[0]?.value || '';
+
+        if (!oauthId) throw new Error('Could not determine Microsoft Object ID (oid)');
+
         const user = await findOrCreateOAuthUser({
           provider: 'microsoft',
-          oauthId:  profile.id,
-          name:     profile.displayName,
-          email:    profile.emails?.[0]?.value ?? profile._json?.mail ?? profile._json?.userPrincipalName ?? '',
+          oauthId,
+          name,
+          email,
         });
         done(null, user);
       } catch (err) {
@@ -86,8 +100,16 @@ if (process.env.MICROSOFT_CLIENT_ID && process.env.MICROSOFT_CLIENT_SECRET) {
         done(err);
       }
     }
-  ));
-  console.log('✅ Microsoft OAuth strategy configured');
+  );
+
+  // CRITICAL: Bypass the default userProfile implementation which calls Graph API /me.
+  // This prevents the "Insufficient privileges" error entirely.
+  msStrategy.userProfile = function(accessToken, done) {
+    done(null, { provider: 'microsoft' });
+  };
+
+  passport.use(msStrategy);
+  console.log('✅ Microsoft OAuth strategy configured (Graph API bypassed)');
 } else {
   console.warn('⚠️ Microsoft OAuth NOT configured — MICROSOFT_CLIENT_ID or MICROSOFT_CLIENT_SECRET missing');
 }
