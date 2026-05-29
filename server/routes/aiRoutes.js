@@ -126,8 +126,12 @@ router.post('/analyze', protect, async (req, res) => {
 //   file: optional single file via multipart form
 router.post('/chat', protect, upload.single('file'), async (req, res) => {
   try {
-    const { message, history: historyRaw } = req.body;
+    const { message, history: historyRaw, resourceIds } = req.body;
     const history = typeof historyRaw === 'string' ? JSON.parse(historyRaw) : (historyRaw || []);
+    let parsedResourceIds = [];
+    if (resourceIds) {
+      parsedResourceIds = typeof resourceIds === 'string' ? JSON.parse(resourceIds) : resourceIds;
+    }
 
     if (!message?.trim()) {
       return res.status(400).json({ message: 'message is required' });
@@ -174,6 +178,37 @@ router.post('/chat', protect, upload.single('file'), async (req, res) => {
         }
       } catch (e) {
         console.warn('[ai/chat] Failed to fetch uploaded file:', e.message);
+      }
+    }
+
+    // If course resources were selected, include their content
+    if (parsedResourceIds && parsedResourceIds.length > 0) {
+      const resources = await Resource.find({ _id: { $in: parsedResourceIds } });
+      for (const resDoc of resources) {
+        if (!resDoc.fileUrl) continue;
+        const mimeType = resDoc.mimeType || 'application/pdf';
+        try {
+          const buffer = await fetchResourceBuffer(resDoc);
+          if (isOfficeFile(mimeType, resDoc.title)) {
+            try {
+              const ast = await officeParser.parseOffice(buffer);
+              const textContent = ast.toText();
+              parts.push({ text: `Course material document (name: "${resDoc.title}") text content:\n---\n${textContent}\n---\n` });
+            } catch (parseErr) {
+              console.warn('[ai/chat] Failed to parse resource Office file:', parseErr.message);
+              parts.push({ text: `Course material document (name: "${resDoc.title}") but text extraction failed.` });
+            }
+          } else {
+            // Check if natively supported
+            if (GEMINI_SUPPORTED.has(mimeType)) {
+               parts.push({ inlineData: { mimeType, data: buffer.toString('base64') } });
+            } else {
+               parts.push({ text: `Course material document (name: "${resDoc.title}") has unsupported format ${mimeType}.` });
+            }
+          }
+        } catch (e) {
+          console.warn(`[ai/chat] Failed to fetch resource ${resDoc.title}:`, e.message);
+        }
       }
     }
 

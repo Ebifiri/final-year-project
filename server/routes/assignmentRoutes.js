@@ -76,9 +76,35 @@ router.get('/:id/submissions', protect, async (req, res) => {
     if (!['lecturer', 'admin'].includes(req.user.role)) {
       return res.status(403).json({ message: 'Not authorised' });
     }
-    const submissions = await Submission.find({ assignmentId: req.params.id })
-      .populate('studentId', 'name email');
-    res.json({ submissions });
+    const assignment = await Assignment.findById(req.params.id);
+    if (!assignment) return res.status(404).json({ message: 'Assignment not found' });
+
+    // Fetch all students enrolled in the course
+    const enrollments = await Enrollment.find({ course: assignment.courseId }).populate('user', 'name email');
+    const enrolledStudents = enrollments.map(e => e.user);
+
+    const submissions = await Submission.find({ assignmentId: req.params.id });
+
+    const result = enrolledStudents.map(student => {
+      const sub = submissions.find(s => s.studentId.toString() === student._id.toString());
+      if (sub) {
+        const subObj = sub.toObject();
+        subObj.studentId = student;
+        return subObj;
+      }
+      // Dummy object for students without a submission
+      return {
+        _id: 'no_submission_' + student._id,
+        assignmentId: assignment._id,
+        studentId: student,
+        files: [],
+        grade: null,
+        feedback: '',
+        createdAt: null,
+      };
+    });
+
+    res.json({ submissions: result });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -90,13 +116,28 @@ router.patch('/:id/submissions/:subId', protect, async (req, res) => {
     if (!['lecturer', 'admin'].includes(req.user.role)) {
       return res.status(403).json({ message: 'Not authorised' });
     }
-    const submission = await Submission.findByIdAndUpdate(
-      req.params.subId,
-      { grade: req.body.grade, feedback: req.body.feedback, gradedBy: req.user._id },
-      { new: true }
-    );
+
+    let submission;
+    if (req.params.subId.startsWith('no_submission_')) {
+      const studentId = req.params.subId.replace('no_submission_', '');
+      submission = await Submission.create({
+        assignmentId: req.params.id,
+        studentId,
+        files: [],
+        grade: req.body.grade,
+        feedback: req.body.feedback,
+        gradedBy: req.user._id
+      });
+    } else {
+      submission = await Submission.findByIdAndUpdate(
+        req.params.subId,
+        { grade: req.body.grade, feedback: req.body.feedback, gradedBy: req.user._id },
+        { new: true }
+      );
+    }
 
     if (submission) {
+      submission = await Submission.findById(submission._id).populate('studentId', 'name email');
       const assignment = await Assignment.findById(submission.assignmentId).populate('courseId');
       if (assignment) {
         let notificationBody = `Your assignment "${assignment.title}" has been graded.`;

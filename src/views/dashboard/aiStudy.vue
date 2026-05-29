@@ -179,8 +179,21 @@
               </div>
             </div>
 
+            <!-- Attached course materials -->
+            <div v-if="chatResourceIds.length > 0" class="px-3 sm:px-4 pt-2 border-t border-slate-100 pb-1">
+              <div class="flex flex-wrap gap-2">
+                <div v-for="resId in chatResourceIds" :key="resId" class="flex items-center gap-1.5 px-2 py-1 bg-purple-50 border border-purple-100 rounded-lg text-xs">
+                  <BookOpen class="w-3 h-3 text-purple-500 flex-shrink-0" />
+                  <span class="truncate text-purple-800 font-medium max-w-[150px]">{{ getResourceTitle(resId) }}</span>
+                  <button class="p-0.5 rounded hover:bg-purple-200 text-purple-400 hover:text-red-500 transition-colors" @click="removeChatResource(resId)">
+                    <X class="w-3 h-3" />
+                  </button>
+                </div>
+              </div>
+            </div>
+
             <!-- File attachment -->
-            <div v-if="chatFile" class="px-3 sm:px-4 pt-2 border-t border-slate-100">
+            <div v-if="chatFile" class="px-3 sm:px-4 pt-2" :class="{ 'border-t border-slate-100': !chatResourceIds.length }">
               <div class="flex items-center gap-2 px-3 py-2 bg-blue-50 rounded-xl text-xs">
                 <Paperclip class="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
                 <span class="truncate text-blue-800 font-medium">{{ chatFile.name }}</span>
@@ -200,7 +213,7 @@
             </div>
 
             <!-- Input area -->
-            <div class="px-3 sm:px-4 pb-3 sm:pb-4 pt-2" :class="{ 'border-t border-slate-100': !chatFile }">
+            <div class="px-3 sm:px-4 pb-3 sm:pb-4 pt-2" :class="{ 'border-t border-slate-100': !chatFile && !chatResourceIds.length }">
               <div class="flex gap-2 items-end">
                 <button
                   class="flex-shrink-0 w-10 h-10 rounded-xl border border-slate-200 hover:bg-blue-50 hover:border-blue-300 flex items-center justify-center transition-colors"
@@ -324,34 +337,19 @@
                         class="flex items-center justify-between px-5 py-3 hover:bg-blue-50/50 transition-colors group"
                       >
                         <div class="flex items-center gap-3 min-w-0">
+                          <input 
+                            type="checkbox" 
+                            class="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer flex-shrink-0"
+                            :checked="selectedResources.has(res._id)"
+                            @change="toggleResourceSelection(res._id)"
+                          />
                           <div class="w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0">
                             <FileText class="w-4 h-4 text-slate-400" />
                           </div>
-                          <div class="min-w-0">
+                          <div class="min-w-0 cursor-pointer" @click="toggleResourceSelection(res._id)">
                             <p class="text-sm font-medium text-slate-800 truncate">{{ res.title }}</p>
                             <p class="text-xs text-slate-400">{{ res.mimeType }}</p>
                           </div>
-                        </div>
-                        <!-- Action buttons -->
-                        <div class="flex items-center gap-1.5 flex-shrink-0 ml-3">
-                          <button
-                            v-for="act in ACTIONS"
-                            :key="act.id"
-                            class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all opacity-0 group-hover:opacity-100"
-                            :class="act.cls"
-                            @click="openAI(res, act.id)"
-                          >
-                            <component :is="act.icon" class="w-3 h-3" />
-                            {{ act.label }}
-                          </button>
-                          <!-- Always-visible sparkle for mobile -->
-                          <button
-                            class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold border border-blue-300 text-blue-700 bg-blue-50 hover:bg-blue-100 transition-all sm:hidden"
-                            @click="openAI(res, 'summary')"
-                          >
-                            <Sparkles class="w-3 h-3" />
-                            AI
-                          </button>
                         </div>
                       </div>
                     </div>
@@ -359,13 +357,52 @@
                 </Transition>
               </div>
             </div>
+            
+            <!-- Bulk Action Bar -->
+            <Transition
+              enter-active-class="transition-all duration-300 ease-out"
+              enter-from-class="opacity-0 translate-y-8"
+              enter-to-class="opacity-100 translate-y-0"
+              leave-active-class="transition-all duration-200 ease-in"
+              leave-from-class="opacity-100 translate-y-0"
+              leave-to-class="opacity-0 translate-y-8"
+            >
+              <div v-if="selectedResources.size > 0" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-4 bg-slate-900 text-white px-6 py-3.5 rounded-2xl shadow-2xl border border-slate-700/50">
+                <div class="flex items-center gap-2 pr-4 border-r border-slate-700">
+                  <div class="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center text-xs font-bold">{{ selectedResources.size }}</div>
+                  <span class="text-sm font-medium text-slate-300">selected</span>
+                </div>
+                
+                <div class="flex items-center gap-2">
+                  <button
+                    v-for="act in ACTIONS"
+                    :key="act.id"
+                    class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold bg-white/10 hover:bg-white/20 transition-colors"
+                    @click="executeBulkAction(act.id)"
+                  >
+                    <component :is="act.icon" class="w-4 h-4" />
+                    <span class="hidden sm:inline">{{ act.label }}</span>
+                  </button>
+                  <button
+                    class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold bg-blue-600 hover:bg-blue-500 text-white transition-colors"
+                    @click="executeBulkAction('chat')"
+                  >
+                    <MessageSquare class="w-4 h-4" />
+                    <span class="hidden sm:inline">Add to Chat</span>
+                  </button>
+                  <button class="ml-2 p-1.5 text-slate-400 hover:text-white transition-colors rounded-lg hover:bg-white/10" @click="selectedResources.clear()">
+                    <X class="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            </Transition>
           </section>
         </template>
       </template>
     </div>
 
-    <!-- AI Modal (for material analysis) -->
-    <AIStudyModal v-model="showModal" :resource="activeResource" :initial-action="initialAction" />
+    <!-- AI Modal (for course page only, kept for backwards compatibility but not used here) -->
+    <!-- <AIStudyModal v-model="showModal" :resource="activeResource" :initial-action="initialAction" /> -->
   </div>
 </template>
 
@@ -436,15 +473,48 @@ async function toggleCourse(courseId) {
   }
 }
 
-// ── AI Modal (material analysis) ─────────────────────────────────────────────
-const showModal      = ref(false);
-const activeResource = ref(null);
-const initialAction  = ref('');
+// ── AI Multi-Select ────────────────────────────────────────────────────────
+const selectedResources = ref(new Set());
+const chatResourceIds = ref([]);
 
-function openAI(resource, action) {
-  activeResource.value = resource;
-  initialAction.value  = action;
-  showModal.value      = true;
+function toggleResourceSelection(resId) {
+  const s = new Set(selectedResources.value);
+  if (s.has(resId)) s.delete(resId);
+  else s.add(resId);
+  selectedResources.value = s;
+}
+
+function getResourceTitle(resId) {
+  // Find across all loaded courses
+  for (const courseId in courseContent) {
+    const res = aiResources(courseId).find(r => r._id === resId);
+    if (res) return res.title;
+  }
+  return 'Document';
+}
+
+function removeChatResource(resId) {
+  chatResourceIds.value = chatResourceIds.value.filter(id => id !== resId);
+}
+
+function executeBulkAction(actionId) {
+  if (selectedResources.value.size === 0) return;
+  chatResourceIds.value = Array.from(selectedResources.value);
+  selectedResources.value.clear();
+  
+  if (actionId === 'chat') {
+    chatInput.value = '';
+    scrollToBottom();
+    return; // Just added them to the chat, don't send immediately
+  }
+  
+  let prompt = '';
+  if (actionId === 'summary') prompt = 'Please provide a clear, well-structured summary of the selected documents. Include the main topics and key takeaways.';
+  if (actionId === 'quiz') prompt = 'Generate a multiple-choice quiz based on the selected materials.';
+  if (actionId === 'flashcards') prompt = 'Create study flashcards from the selected materials.';
+  
+  chatInput.value = prompt;
+  sendChat();
 }
 
 // ── AI Chatbot ────────────────────────────────────────────────────────────────
@@ -514,7 +584,12 @@ async function sendChat() {
   chatError.value = '';
 
   // Append user message
-  const userMsg = chatFile.value ? `📎 ${chatFile.value.name}\n${text}` : text;
+  let attachText = '';
+  if (chatFile.value) attachText += `📎 ${chatFile.value.name}\n`;
+  if (chatResourceIds.value.length > 0) {
+    attachText += `📚 [Attached ${chatResourceIds.value.length} course material(s)]\n`;
+  }
+  const userMsg = attachText ? `${attachText}${text}` : text;
   chatHistory.value = [...chatHistory.value, { role: 'user', text: userMsg }];
   await scrollToBottom();
 
@@ -530,10 +605,19 @@ async function sendChat() {
       fd.append('message', text);
       fd.append('history', JSON.stringify(historyForApi));
       fd.append('file', chatFile.value);
+      if (chatResourceIds.value.length > 0) {
+        fd.append('resourceIds', JSON.stringify(chatResourceIds.value));
+      }
       data = await api.postForm('/api/ai/chat', fd, { signal: chatAbortController.value.signal });
       chatFile.value = null; // clear file after sending
+      chatResourceIds.value = []; // clear course materials
     } else {
-      data = await api.post('/api/ai/chat', { message: text, history: historyForApi }, { signal: chatAbortController.value.signal });
+      data = await api.post('/api/ai/chat', { 
+        message: text, 
+        history: historyForApi,
+        resourceIds: chatResourceIds.value
+      }, { signal: chatAbortController.value.signal });
+      chatResourceIds.value = []; // clear course materials
     }
 
     chatHistory.value = [...chatHistory.value, { role: 'model', text: data.reply }];
