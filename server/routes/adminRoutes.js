@@ -92,6 +92,58 @@ router.post('/users', async (req, res) => {
   }
 });
 
+// ── PUT /api/admin/users/:id ──────────────────────────────────────────────────
+router.put('/users/:id', async (req, res) => {
+  try {
+    const { name, email, role, activeCourses } = req.body;
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    // Update user info
+    user.name = name || user.name;
+    user.email = email || user.email;
+    
+    // Changing roles is complicated because of related data, but we can allow it if needed,
+    // though for safety we might just update course associations based on their current role.
+    const oldRole = user.role;
+    user.role = role || user.role;
+    await user.save();
+
+    // Update course associations
+    if (activeCourses && Array.isArray(activeCourses)) {
+      if (user.role === 'student') {
+        // Sync enrollments
+        await Enrollment.deleteMany({ user: user._id });
+        const enrollments = activeCourses.map(courseId => ({
+          user: user._id,
+          course: courseId
+        }));
+        if (enrollments.length > 0) {
+          await Enrollment.insertMany(enrollments);
+        }
+      } else if (user.role === 'lecturer') {
+        // Sync course lecturer assignments
+        // Remove from all courses first
+        await Course.updateMany(
+          { lecturers: user._id },
+          { $pull: { lecturers: user._id } }
+        );
+        // Add to selected courses
+        if (activeCourses.length > 0) {
+          await Course.updateMany(
+            { _id: { $in: activeCourses } },
+            { $addToSet: { lecturers: user._id } }
+          );
+        }
+      }
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // ── DELETE /api/admin/users/:id ───────────────────────────────────────────────
 router.delete('/users/:id', async (req, res) => {
   try {

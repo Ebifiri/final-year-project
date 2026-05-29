@@ -13,7 +13,7 @@
         :key="tab"
         @click="activeTab = tab"
         class="px-5 py-3 text-sm font-medium border-b-2 transition-colors"
-        :class="activeTab === tab ? 'border-primary-600 text-primary-600' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'"
+        :class="activeTab === tab ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'"
       >
         {{ tab }}
       </button>
@@ -96,10 +96,10 @@
             v-model="userSearchQuery" 
             type="text" 
             placeholder="Search users..." 
-            class="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all"
+            class="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
           >
         </div>
-        <button @click="showUserModal = true" class="flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg transition-colors shadow-sm">
+        <button @click="openUserModal(null)" class="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors shadow-sm">
           <UserPlus class="w-4 h-4" /> Add User
         </button>
       </div>
@@ -168,6 +168,13 @@
                 </td>
                 <td class="px-6 py-4 text-right">
                   <button 
+                    @click="openUserModal(user)" 
+                    class="p-1.5 text-slate-400 hover:bg-indigo-50 hover:text-indigo-600 rounded transition-colors mr-1"
+                    title="Edit User"
+                  >
+                    <Edit2 class="w-4 h-4" />
+                  </button>
+                  <button 
                     @click="deleteUser(user._id)" 
                     class="p-1.5 text-red-500 hover:bg-red-50 rounded transition-colors"
                     title="Delete User"
@@ -193,10 +200,10 @@
             v-model="courseSearchQuery" 
             type="text" 
             placeholder="Search courses..." 
-            class="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all"
+            class="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
           >
         </div>
-        <button @click="openCourseModal(null)" class="flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg transition-colors shadow-sm">
+        <button @click="openCourseModal(null)" class="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors shadow-sm">
           <Plus class="w-4 h-4" /> Add Course
         </button>
       </div>
@@ -217,7 +224,7 @@
             <div class="flex justify-between items-start mb-2">
               <span class="px-2 py-1 bg-slate-100 text-slate-600 text-xs font-semibold rounded">{{ course.code }}</span>
               <div class="flex gap-1">
-                <button @click="openCourseModal(course)" class="p-1.5 text-slate-400 hover:text-primary-600 hover:bg-primary-50 rounded transition-colors" title="Edit Course">
+                <button @click="openCourseModal(course)" class="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors" title="Edit Course">
                   <Edit2 class="w-4 h-4" />
                 </button>
                 <button @click="deleteCourse(course._id)" class="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors" title="Delete Course">
@@ -248,41 +255,61 @@
     <!-- Add User Modal -->
     <div v-if="showUserModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
       <div class="bg-white rounded-2xl w-full max-w-md shadow-xl overflow-hidden border border-slate-200">
-        <div class="p-6 border-b border-slate-100 flex justify-between items-center">
-          <h2 class="text-xl font-bold text-slate-900">Add New User</h2>
+        <div class="p-6 border-b border-slate-100 flex justify-between items-center shrink-0">
+          <h2 class="text-xl font-bold text-slate-900">{{ userForm._id ? 'Edit User' : 'Add New User' }}</h2>
           <button @click="showUserModal = false" class="text-slate-400 hover:text-slate-600">
             <X class="w-5 h-5" />
           </button>
         </div>
-        <form @submit.prevent="createUser" class="p-6 space-y-4">
+        <div class="p-6 overflow-y-auto flex-1">
+        <form @submit.prevent="saveUser" class="space-y-4">
           <div>
             <label class="block text-sm font-medium text-slate-700 mb-1">Full Name</label>
-            <input v-model="userForm.name" required type="text" class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
+            <input v-model="userForm.name" required type="text" class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
           </div>
           <div>
             <label class="block text-sm font-medium text-slate-700 mb-1">Email Address</label>
-            <input v-model="userForm.email" required type="email" class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
+            <input v-model="userForm.email" required type="email" class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
           </div>
           <div>
             <label class="block text-sm font-medium text-slate-700 mb-1">Password</label>
-            <input v-model="userForm.password" required type="password" minlength="6" class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
+            <input v-model="userForm.password" required type="password" minlength="6" class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
           </div>
           <div>
             <label class="block text-sm font-medium text-slate-700 mb-1">Role</label>
-            <select v-model="userForm.role" required class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none bg-white">
+            <select v-model="userForm.role" required class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white">
               <option value="student">Student</option>
               <option value="lecturer">Lecturer</option>
               <option value="admin">System Admin</option>
             </select>
           </div>
-          <div class="pt-4 flex justify-end gap-3">
+          <div v-if="userForm.role !== 'admin'" class="border-t border-slate-200 pt-4 mt-6">
+            <label class="block text-sm font-medium text-slate-700 mb-2">{{ userForm.role === 'student' ? 'Enrolled Courses' : 'Assigned Courses' }}</label>
+            <div class="bg-slate-50 border border-slate-200 rounded-lg p-3 max-h-48 overflow-y-auto">
+              <div v-if="courses.length === 0" class="text-sm text-slate-500 italic">No courses found in the system.</div>
+              <div v-for="course in courses" :key="course._id" class="flex items-center mb-2 last:mb-0">
+                <input 
+                  type="checkbox" 
+                  :id="'uc-'+course._id"
+                  :value="course._id"
+                  v-model="userForm.activeCourses"
+                  class="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"
+                >
+                <label :for="'uc-'+course._id" class="ml-3 text-sm text-slate-700 cursor-pointer select-none">
+                  <span class="font-medium">{{ course.code }}</span> <span class="text-slate-500 text-xs ml-1">{{ course.title }}</span>
+                </label>
+              </div>
+            </div>
+          </div>
+          <div class="pt-6 flex justify-end gap-3 border-t border-slate-100">
             <button type="button" @click="showUserModal = false" class="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">Cancel</button>
-            <button type="submit" :disabled="submitting" class="px-4 py-2 text-sm font-medium bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2">
+            <button type="submit" :disabled="submitting" class="px-4 py-2 text-sm font-medium bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2">
               <Loader2 v-if="submitting" class="w-4 h-4 animate-spin" />
-              Save User
+              {{ userForm._id ? 'Update User' : 'Save User' }}
             </button>
           </div>
         </form>
+        </div>
       </div>
     </div>
 
@@ -300,22 +327,22 @@
             <div class="grid grid-cols-2 gap-4">
               <div>
                 <label class="block text-sm font-medium text-slate-700 mb-1">Course Code</label>
-                <input v-model="courseForm.code" required type="text" placeholder="e.g. CSC401" class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none uppercase">
+                <input v-model="courseForm.code" required type="text" placeholder="e.g. CSC401" class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none uppercase">
               </div>
               <div>
                 <label class="block text-sm font-medium text-slate-700 mb-1">Title</label>
-                <input v-model="courseForm.title" required type="text" placeholder="e.g. Artificial Intelligence" class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
+                <input v-model="courseForm.title" required type="text" placeholder="e.g. Artificial Intelligence" class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
               </div>
             </div>
             
             <div class="grid grid-cols-3 gap-4">
               <div>
                 <label class="block text-sm font-medium text-slate-700 mb-1">Department</label>
-                <input v-model="courseForm.dept" required type="text" class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
+                <input v-model="courseForm.dept" required type="text" class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
               </div>
               <div>
                 <label class="block text-sm font-medium text-slate-700 mb-1">Year</label>
-                <select v-model="courseForm.year" required class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none bg-white">
+                <select v-model="courseForm.year" required class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white">
                   <option value="1">Year 1</option>
                   <option value="2">Year 2</option>
                   <option value="3">Year 3</option>
@@ -325,13 +352,13 @@
               </div>
               <div>
                 <label class="block text-sm font-medium text-slate-700 mb-1">Credits</label>
-                <input v-model="courseForm.credits" required type="number" min="1" max="6" class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
+                <input v-model="courseForm.credits" required type="number" min="1" max="6" class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
               </div>
             </div>
 
             <div>
               <label class="block text-sm font-medium text-slate-700 mb-1">Description</label>
-              <textarea v-model="courseForm.description" rows="3" class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none resize-none"></textarea>
+              <textarea v-model="courseForm.description" rows="3" class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none resize-none"></textarea>
             </div>
 
             <div>
@@ -353,7 +380,7 @@
                     :id="'lec-'+lecturer._id"
                     :value="lecturer._id"
                     v-model="courseForm.lecturers"
-                    class="w-4 h-4 text-primary-600 border-slate-300 rounded focus:ring-primary-500"
+                    class="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"
                   >
                   <label :for="'lec-'+lecturer._id" class="ml-3 text-sm text-slate-700 cursor-pointer select-none">
                     <span class="font-medium">{{ lecturer.name }}</span> <span class="text-slate-500 text-xs ml-1">({{ lecturer.email }})</span>
@@ -364,7 +391,7 @@
             
             <div class="pt-6 flex justify-end gap-3 border-t border-slate-100">
               <button type="button" @click="showCourseModal = false" class="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">Cancel</button>
-              <button type="submit" :disabled="submitting" class="px-4 py-2 text-sm font-medium bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2">
+              <button type="submit" :disabled="submitting" class="px-4 py-2 text-sm font-medium bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2">
                 <Loader2 v-if="submitting" class="w-4 h-4 animate-spin" />
                 {{ courseForm._id ? 'Update Course' : 'Create Course' }}
               </button>
@@ -405,7 +432,7 @@ const courseSearchQuery = ref('');
 const showUserModal = ref(false);
 const showCourseModal = ref(false);
 
-const userForm = ref({ name: '', email: '', password: '', role: 'student' });
+const userForm = ref({ name: '', email: '', password: '', role: 'student', activeCourses: [] });
 const courseForm = ref({ code: '', title: '', dept: '', year: '1', credits: 3, description: '', color: '#4f46e5', lecturers: [] });
 
 // Computed
@@ -464,17 +491,40 @@ onMounted(() => {
 });
 
 // Actions
-const createUser = async () => {
+const openUserModal = (user = null) => {
+  if (user) {
+    userForm.value = {
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      password: '',
+      role: user.role,
+      activeCourses: user.activeCourses ? user.activeCourses.map(c => c._id || c) : []
+    };
+  } else {
+    userForm.value = { name: '', email: '', password: '', role: 'student', activeCourses: [] };
+  }
+  showUserModal.value = true;
+};
+
+const saveUser = async () => {
   if (submitting.value) return;
   submitting.value = true;
+  const isEditing = !!userForm.value._id;
+  const url = `/api/admin/users${isEditing ? `/${userForm.value._id}` : ''}`;
+
   try {
-    await api.post('/api/admin/users', userForm.value);
+    if (isEditing) {
+      await api.patch(url.replace('patch', 'put'), userForm.value, { method: 'PUT' });
+    } else {
+      await api.post(url, userForm.value);
+    }
     showUserModal.value = false;
-    userForm.value = { name: '', email: '', password: '', role: 'student' };
+    userForm.value = { name: '', email: '', password: '', role: 'student', activeCourses: [] };
     fetchUsers();
     fetchStats();
   } catch (err) {
-    alert(err.message || 'Failed to create user');
+    alert(err.message || 'Failed to save user');
     console.error(err);
   } finally {
     submitting.value = false;
