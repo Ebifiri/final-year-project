@@ -295,7 +295,8 @@ import { ref, computed, defineComponent, h, watch, onMounted, onUnmounted } from
 import { RouterLink, useRouter } from 'vue-router';
 import {
   Bell, Mail, ChevronDown, ChevronRight, Search, Menu, LogIn,
-  LayoutDashboard, LogOut, Award, X, BookMarked, Home as HomeIcon, Settings, Calendar, ChevronLeft, CheckCircle2, MonitorPlay, Sparkles, Shield
+  LayoutDashboard, LogOut, Award, X, BookMarked, Home as HomeIcon, Settings, Calendar, ChevronLeft, CheckCircle2, MonitorPlay, Sparkles, Shield,
+  FileText, ClipboardList, HelpCircle, Megaphone
 } from 'lucide-vue-next';
 import { useAuthStore }         from '@/stores/auth.js';
 import { useEnrollmentStore }   from '@/stores/enrollments.js';
