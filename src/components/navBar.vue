@@ -274,14 +274,14 @@
           <HeaderNavItem title="Apply to PAU" :has-dropdown="false" href="https://apply.pau.edu.ng" />
         </div>
         <!-- Announcement Banner -->
-        <a 
-          href="https://forms.gle/D8qXbv7VTTHVXeKC9" 
-          target="_blank" 
-          rel="noopener noreferrer" 
+        <!-- <a
+          href="https://forms.gle/D8qXbv7VTTHVXeKC9"
+          target="_blank"
+          rel="noopener noreferrer"
           class="block bg-red-600 hover:bg-red-700 text-white py-2 px-4 text-center text-xs sm:text-sm font-semibold tracking-wide transition-colors hover:underline shrink-0"
         >
           Please fill out this form after using the site 🤞
-        </a>
+        </a> -->
       </header>
 
       <!-- PAGE CONTENT + FOOTER -->
@@ -577,7 +577,7 @@ const SidebarContents = defineComponent({
                   h(RouterLink, { to: '/',                onClick: props.onClose, class: 'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all' }, () => [h(HomeIcon,        { class: 'w-5 h-5 text-slate-400' }), h('span', 'Site home')]),
                   h(RouterLink, { to: '/dashboard/home', onClick: props.onClose, class: 'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all' }, () => [h(LayoutDashboard, { class: 'w-5 h-5 text-slate-400' }), h('span', 'Dashboard')]),
                   h(RouterLink, { to: '/courses',        onClick: props.onClose, class: 'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all' }, () => [h(BookMarked,      { class: 'w-5 h-5 text-slate-400' }), h('span', 'All courses')]),
-                  auth.user?.role !== 'admin' 
+                  auth.user?.role !== 'admin'
                     ? h(RouterLink, { to: '/grades', onClick: props.onClose, class: 'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all' }, () => [h(Award, { class: 'w-5 h-5 text-slate-400' }), h('span', auth.user?.role === 'lecturer' ? 'Progress Reports' : 'Grades')])
                     : null,
                   h(RouterLink, { to: '/dashboard/ai',  onClick: props.onClose, class: 'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all cursor-pointer' }, () => [h(Sparkles,       { class: 'w-5 h-5 text-blue-500' }), h('span', 'AI Study Assistant')]),
