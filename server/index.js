@@ -44,8 +44,6 @@ startReminderCron();
 const app = express();
 
 // ── Security Middleware ───────────────────────────────────────────────────────
-app.use(helmetMiddleware);                     // Secure HTTP headers
-app.use(globalLimiter);                        // Rate limit: 100 req / 15 min per IP
 app.use(cors({
   origin: [
     'http://localhost:5173',   // Vite dev server
@@ -54,6 +52,8 @@ app.use(cors({
   ].filter(Boolean),
   credentials: true,
 }));
+app.use(helmetMiddleware);                     // Secure HTTP headers
+app.use(globalLimiter);                        // Rate limit: 100 req / 15 min per IP
 app.use(express.json({ limit: '10mb' }));      // Body parser with size limit
 app.use(mongoSanitizeMiddleware);              // Prevent NoSQL injection
 app.use(xssMiddleware);                        // Sanitise input against XSS
