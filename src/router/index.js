@@ -7,6 +7,7 @@ import dashboardHome from '@/views/dashboard/dashboardHome.vue'
 import courseList    from '@/views/courseList.vue'
 import coursePage    from '@/views/dashboard/coursePage.vue'
 import aiStudy       from '@/views/dashboard/aiStudy.vue'
+import privacyPolicy from '@/views/privacyPolicy.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -75,6 +76,11 @@ const router = createRouter({
     {
       path: '/dashboard/admin',
       redirect: '/dashboard/home',
+    },
+    {
+      path: '/privacy-policy',
+      name: 'privacy-policy',
+      component: privacyPolicy,
     },
   ],
   scrollBehavior(to, from, savedPosition) {

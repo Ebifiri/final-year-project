@@ -6,6 +6,7 @@ import Enrollment from '../models/Enrollment.js';
 import Submission from '../models/Submission.js';
 import QuizAttempt from '../models/QuizAttempt.js';
 import protect from '../middleware/auth.js';
+import { logAudit } from '../middleware/auditLogger.js';
 
 const router = express.Router();
 
@@ -85,6 +86,8 @@ router.post('/users', async (req, res) => {
     const newUser = await User.create({ name, email, password, role });
     const userResponse = newUser.toObject();
     delete userResponse.password;
+
+    await logAudit({ action: 'USER_CREATE', req, target: 'User', targetId: newUser._id, details: `Admin created user: ${email} (${role})` });
     
     res.status(201).json({ user: userResponse });
   } catch (err) {
@@ -111,6 +114,12 @@ router.put('/users/:id', async (req, res) => {
     const oldRole = user.role;
     user.role = role || user.role;
     await user.save();
+
+    // Log role change specifically
+    if (oldRole !== user.role) {
+      await logAudit({ action: 'ROLE_CHANGE', req, target: 'User', targetId: user._id, details: `Role changed from ${oldRole} to ${user.role} for ${user.email}` });
+    }
+    await logAudit({ action: 'USER_UPDATE', req, target: 'User', targetId: user._id, details: `Admin updated user: ${user.email}` });
 
     // Update course associations
     if (activeCourses && Array.isArray(activeCourses)) {
@@ -173,6 +182,9 @@ router.delete('/users/:id', async (req, res) => {
     }
 
     await User.findByIdAndDelete(user._id);
+
+    await logAudit({ action: 'USER_DELETE', req, target: 'User', targetId: user._id, details: `Admin deleted user: ${user.email} (${user.role})` });
+
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -204,6 +216,9 @@ router.post('/courses', async (req, res) => {
     });
 
     const populated = await Course.findById(course._id).populate('lecturers', 'name email').lean();
+
+    await logAudit({ action: 'COURSE_CREATE', req, target: 'Course', targetId: course._id, details: `Admin created course: ${code}` });
+
     res.status(201).json({ course: populated });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -216,6 +231,8 @@ router.put('/courses/:id', async (req, res) => {
     const course = await Course.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true })
       .populate('lecturers', 'name email').lean();
     if (!course) return res.status(404).json({ message: 'Course not found' });
+
+    await logAudit({ action: 'COURSE_UPDATE', req, target: 'Course', targetId: course._id, details: `Admin updated course: ${course.code}` });
     
     res.json({ course });
   } catch (err) {
@@ -234,6 +251,9 @@ router.delete('/courses/:id', async (req, res) => {
     // Note: We'd normally also delete Resources, Quizzes, Assignments here
     
     await Course.findByIdAndDelete(course._id);
+
+    await logAudit({ action: 'COURSE_DELETE', req, target: 'Course', targetId: course._id, details: `Admin deleted course: ${course.code}` });
+
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ message: err.message });

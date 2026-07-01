@@ -5,6 +5,9 @@ import { Strategy as GoogleStrategy }    from 'passport-google-oauth20';
 import { Strategy as MicrosoftStrategy } from 'passport-microsoft';
 import User from '../models/User.js';
 import protect from '../middleware/auth.js';
+import { authLimiter } from '../middleware/security.js';
+import { validateRegistration, validateLogin } from '../middleware/validate.js';
+import { logAudit } from '../middleware/auditLogger.js';
 
 const router = express.Router();
 
@@ -115,13 +118,9 @@ if (process.env.MICROSOFT_CLIENT_ID && process.env.MICROSOFT_CLIENT_SECRET) {
 }
 
 // ── POST /api/auth/register ───────────────────────────────────────────────────
-router.post('/register', async (req, res) => {
+router.post('/register', authLimiter, validateRegistration, async (req, res) => {
   try {
     const { name, email, password } = req.body;
-
-    if (!name || !email || !password) {
-      return res.status(400).json({ message: 'Please provide name, email and password' });
-    }
 
     const existing = await User.findOne({ email });
     if (existing) {
@@ -130,6 +129,8 @@ router.post('/register', async (req, res) => {
 
     const user  = await User.create({ name, email, password });
     const token = signToken(user._id);
+
+    await logAudit({ action: 'REGISTER', req, target: 'User', targetId: user._id, details: `New user registered: ${email}` });
 
     res.status(201).json({
       token,
@@ -141,20 +142,19 @@ router.post('/register', async (req, res) => {
 });
 
 // ── POST /api/auth/login ──────────────────────────────────────────────────────
-router.post('/login', async (req, res) => {
+router.post('/login', authLimiter, validateLogin, async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    if (!email || !password) {
-      return res.status(400).json({ message: 'Please provide email and password' });
-    }
-
     const user = await User.findOne({ email }).select('+password');
     if (!user || !(await user.comparePassword(password))) {
+      await logAudit({ action: 'LOGIN_FAILURE', req, details: `Failed login attempt for: ${email}` });
       return res.status(401).json({ message: 'Invalid email or password' });
     }
 
     const token = signToken(user._id);
+
+    await logAudit({ action: 'LOGIN_SUCCESS', req, userId: user._id, target: 'User', targetId: user._id, details: `User logged in: ${email}` });
 
     res.json({
       token,
@@ -223,8 +223,12 @@ router.get('/microsoft/callback', (req, res, next) => {
   })(req, res, next);
 });
 
-// ── Debug: check configured OAuth callback URLs ──────────────────────────────
-router.get('/debug/config', (req, res) => {
+// ── Debug: check configured OAuth callback URLs (admin only in production) ──
+router.get('/debug/config', protect, (req, res) => {
+  // Only allow admins to see debug config
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Access denied' });
+  }
   res.json({
     microsoft_callback: microsoftConfigured ? `${process.env.BACKEND_URL}/api/auth/microsoft/callback` : 'NOT CONFIGURED',
     google_callback: googleConfigured ? `${process.env.BACKEND_URL}/api/auth/google/callback` : 'NOT CONFIGURED',

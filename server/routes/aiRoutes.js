@@ -5,8 +5,12 @@ import Resource from '../models/Resource.js';
 import protect  from '../middleware/auth.js';
 import upload   from '../middleware/upload.js';
 import { fetchResourceBuffer } from '../utils/fileAccess.js';
+import { aiLimiter } from '../middleware/security.js';
 
 const router = express.Router();
+
+// Apply AI-specific rate limit to all AI routes (30 req / 15 min)
+router.use(aiLimiter);
 
 function isOfficeFile(mimeType, filename) {
   const m = mimeType?.toLowerCase() || '';

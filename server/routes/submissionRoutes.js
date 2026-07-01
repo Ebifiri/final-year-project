@@ -4,6 +4,7 @@ import Assignment  from '../models/Assignment.js';
 import Enrollment  from '../models/Enrollment.js';
 import protect     from '../middleware/auth.js';
 import upload      from '../middleware/upload.js';
+import { logAudit } from '../middleware/auditLogger.js';
 
 const router = express.Router();
 
@@ -78,6 +79,11 @@ router.post('/', protect, upload.array('files', 20), async (req, res) => {
         assignmentId, studentId: req.user._id, files: allFiles,
       });
     }
+
+    await logAudit({
+      action: 'ASSIGNMENT_SUBMIT', req, target: 'Submission', targetId: submission._id,
+      details: `Student submitted ${allFiles.length} file(s) for assignment: ${assignment.title}`,
+    });
 
     res.status(201).json({ submission });
   } catch (err) {

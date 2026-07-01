@@ -25,11 +25,10 @@
             >PAU Servicedesk</a>
           </li>
           <li>
-            <a
-              href="https://pau.edu.ng/privacy-policy"
-              target="_blank" rel="noopener noreferrer"
+            <router-link
+              to="/privacy-policy"
               class="text-sm text-blue-200 hover:text-white transition-colors hover:underline underline-offset-2"
-            >PAU Privacy Policy</a>
+            >Privacy Policy</router-link>
           </li>
         </ul>
       </div>

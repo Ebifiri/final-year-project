@@ -10,6 +10,16 @@ import cors from 'cors';
 import passport from 'passport';
 import connectDB from './config/db.js';
 
+// Security middleware
+import {
+  helmetMiddleware,
+  globalLimiter,
+  mongoSanitizeMiddleware,
+  xssMiddleware,
+  hppMiddleware,
+} from './middleware/security.js';
+import errorHandler from './middleware/errorHandler.js';
+
 // Route handlers
 import authRoutes        from './routes/authRoutes.js';
 import courseRoutes      from './routes/courseRoutes.js';
@@ -23,6 +33,7 @@ import aiRoutes          from './routes/aiRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
 import progressRoutes    from './routes/progressRoutes.js';
 import adminRoutes       from './routes/adminRoutes.js';
+import auditRoutes       from './routes/auditRoutes.js';
 
 import { startReminderCron } from './utils/reminders.js';
 
@@ -32,7 +43,9 @@ startReminderCron();
 
 const app = express();
 
-// ── Middleware ────────────────────────────────────────────────────────────────
+// ── Security Middleware ───────────────────────────────────────────────────────
+app.use(helmetMiddleware);                     // Secure HTTP headers
+app.use(globalLimiter);                        // Rate limit: 100 req / 15 min per IP
 app.use(cors({
   origin: [
     'http://localhost:5173',   // Vite dev server
@@ -41,8 +54,11 @@ app.use(cors({
   ].filter(Boolean),
   credentials: true,
 }));
-app.use(express.json());
-app.use(passport.initialize()); // stateless — no sessions
+app.use(express.json({ limit: '10mb' }));      // Body parser with size limit
+app.use(mongoSanitizeMiddleware);              // Prevent NoSQL injection
+app.use(xssMiddleware);                        // Sanitise input against XSS
+app.use(hppMiddleware);                        // Prevent HTTP parameter pollution
+app.use(passport.initialize());                // stateless — no sessions
 
 // ── Routes ────────────────────────────────────────────────────────────────────
 app.use('/api/auth',        authRoutes);
@@ -57,6 +73,7 @@ app.use('/api/ai',            aiRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/progress',      progressRoutes);
 app.use('/api/admin',         adminRoutes);
+app.use('/api/admin/audit-logs', auditRoutes);
 
 // ── Health check ─────────────────────────────────────────────────────────────
 app.get('/api/health', (_, res) => res.json({
@@ -74,6 +91,10 @@ app.get('/api/health', (_, res) => res.json({
 
 // ── 404 fallback ──────────────────────────────────────────────────────────────
 app.use((_, res) => res.status(404).json({ message: 'Route not found' }));
+
+// ── Global Error Handler ─────────────────────────────────────────────────────
+// Must be registered AFTER all routes
+app.use(errorHandler);
 
 // ── Start server ──────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 5000;

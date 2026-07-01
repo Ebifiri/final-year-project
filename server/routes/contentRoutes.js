@@ -10,6 +10,7 @@ import protect     from '../middleware/auth.js';
 import upload      from '../middleware/upload.js';
 import { getServerFetchUrl, fetchResourceStream, fetchResourceBuffer } from '../utils/fileAccess.js';
 import { notifyEnrolledStudents } from '../utils/notifyEnrolledStudents.js';
+import { logAudit } from '../middleware/auditLogger.js';
 
 function isOfficeFile(mimeType, filename) {
   const m = mimeType?.toLowerCase() || '';
@@ -71,8 +72,13 @@ router.get('/download/:resourceId', async (req, res) => {
 
 // ── GET /api/content/debug/:resourceId  — diagnostic endpoint ─────────────────
 // Tests all 3 download strategies and reports which ones succeed.
-router.get('/debug/:resourceId', async (req, res) => {
+router.get('/debug/:resourceId', protect, async (req, res) => {
   try {
+    // Only allow admins to access debug info
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
     const resource = await Resource.findById(req.params.resourceId);
     if (!resource) return res.status(404).json({ message: 'Not found' });
 
@@ -356,6 +362,12 @@ Generate EXACTLY ${qCount} questions.`;
 
       const resource = await Resource.create(resourceData);
 
+      // Audit log for resource/file upload
+      await logAudit({
+        action: 'FILE_UPLOAD', req, target: 'Resource', targetId: resource._id,
+        details: `Uploaded ${type}: "${title}" to course ${section.courseId.code}`,
+      });
+
       // ── Notify enrolled students ──────────────────────────────────────────
       const notifType = ['announcement', 'assignment', 'quiz'].includes(type) ? type : 'resource';
       const notifDueDate = (type === 'assignment' || type === 'quiz') ? (closesAt || req.body.dueDate) : null;
@@ -408,6 +420,11 @@ router.delete('/resources/:resourceId', protect, async (req, res) => {
 
     const allowed = await canManageCourse(req.user._id, req.user.role, resource.sectionId.courseId.code);
     if (!allowed) return res.status(403).json({ message: 'Not authorised' });
+
+    await logAudit({
+      action: 'FILE_DELETE', req, target: 'Resource', targetId: resource._id,
+      details: `Deleted resource: "${resource.title}"`,
+    });
 
     await resource.deleteOne();
     res.json({ message: 'Resource deleted' });

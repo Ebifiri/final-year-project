@@ -5,6 +5,7 @@ import Course       from '../models/Course.js';
 import Enrollment   from '../models/Enrollment.js';
 import protect      from '../middleware/auth.js';
 import { notifyEnrolledStudents } from '../utils/notifyEnrolledStudents.js';
+import { logAudit } from '../middleware/auditLogger.js';
 
 const router = express.Router();
 
@@ -81,6 +82,9 @@ router.post('/', protect, async (req, res) => {
     });
 
     res.status(201).json({ quiz });
+
+    // Non-blocking audit log
+    logAudit({ action: 'QUIZ_CREATE', req, target: 'Quiz', targetId: quiz._id, details: `Created quiz: "${title}" for course ${courseCode}` });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -374,6 +378,9 @@ Return ONLY a valid JSON array of objects (one for each input question in order)
     });
 
     res.status(201).json({ attempt, score, totalPoints });
+
+    // Non-blocking audit log
+    logAudit({ action: 'QUIZ_ATTEMPT', req, target: 'QuizAttempt', targetId: attempt._id, details: `Student attempted quiz ${quizId}: ${score}/${totalPoints}` });
   } catch (err) {
     console.error('Attempt submission error:', err);
     res.status(500).json({ message: err.message });
