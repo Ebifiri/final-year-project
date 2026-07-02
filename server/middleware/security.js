@@ -2,34 +2,32 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import hpp from 'hpp';
 
-const isDev = process.env.NODE_ENV !== 'production';
-
 // ── Helmet — secure HTTP headers ──────────────────────────────────────────────
 export const helmetMiddleware = helmet();
 
 // ── Rate Limiters ─────────────────────────────────────────────────────────────
-// Global: 100 requests per 15 minutes per IP (high limit in dev)
+// Global: 150 requests per 15 minutes per IP
 export const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: isDev ? 5000 : 150,
+  max: 150,
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: 'Too many requests from this IP, please try again after 15 minutes' },
 });
 
-// Strict: 20 requests per 15 minutes — for auth endpoints (high limit in dev)
+// Strict: 20 requests per 15 minutes — for auth endpoints
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: isDev ? 500 : 20,
+  max: 20,
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: 'Too many authentication attempts, please try again after 15 minutes' },
 });
 
-// AI endpoints: 30 requests per 15 minutes (high limit in dev)
+// AI endpoints: 30 requests per 15 minutes
 export const aiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: isDev ? 500 : 30,
+  max: 30,
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: 'Too many AI requests, please try again after 15 minutes' },
