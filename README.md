@@ -2,8 +2,7 @@
 
 An advanced, feature-rich Learning Management System (LMS) custom-built for Pan-Atlantic University (PAU). This system provides an intuitive interface for students, faculty, and administrators, complete with interactive course hubs, AI-powered study assistance, and comprehensive admin utilities.
 
-- **Production Client URL:** [https://pau-lms.netlify.app](https://pau-lms.netlify.app)
-- **Production API Server URL:** [https://pau-lms.onrender.com](https://pau-lms.onrender.com)
+- **Site URL:** [https://pau-lms.netlify.app](https://pau-lms.netlify.app)
 
 ---
 
